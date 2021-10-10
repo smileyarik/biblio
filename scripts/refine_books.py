@@ -1,6 +1,5 @@
 import argparse
 import sys
-import csv
 import json
 import os
 import random
@@ -8,56 +7,7 @@ import string
 from datetime import datetime
 from collections import defaultdict
 
-
-def read_csv(
-    file_name,
-    delimiter=";",
-    encoding='utf-8-sig',
-    save_fields=None,
-    sample_rate=1.0
-):
-    with open(file_name, encoding=encoding) as r:
-        reader = csv.reader(r, delimiter=delimiter)
-        header = next(reader)
-        for row in reader:
-            record = dict(zip(header, row))
-            record.pop('', None)
-            if save_fields:
-                record = {key: value for key, value in record.items() if key in save_fields}
-            if random.random() < sample_rate:
-                yield record
-
-
-def read_json(file_name, save_fields=None):
-    with open(file_name) as r:
-        records = json.load(r)
-        if save_fields:
-            records = [{key: value for key, value in r.items() if key in save_fields} for r in records]
-    return records
-
-
-def read_csv_files(
-    directory,
-    prefix,
-    delimiter=";",
-    encoding='utf-8-sig',
-    save_fields=None,
-    sample_rate=1.0
-):
-    for file_name in os.listdir(directory):
-        full_path = os.path.join(directory, file_name)
-        assert os.path.exists(full_path)
-        if file_name.startswith(prefix):
-            file_gen = read_csv(
-                file_name=full_path,
-                delimiter=delimiter,
-                encoding=encoding,
-                save_fields=save_fields,
-                sample_rate=sample_rate
-            )
-            for record in file_gen:
-                yield record
-
+from util import read_csv_files, read_json, write_jsonl
 
 def main(
     items_directory,
@@ -154,9 +104,7 @@ def main(
     print("Writing to {}...".format(output_path))
     items_plain = list(items.values())
     items_plain.sort(key=lambda x: x["uniq_id"])
-    with open(output_path, "w", encoding="utf-8") as w:
-        for item in items_plain:
-            w.write(json.dumps(item, ensure_ascii=False).strip() + "\n")
+    write_jsonl(output_path, items_plain)
 
 
 if __name__ == "__main__":
