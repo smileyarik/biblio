@@ -16,8 +16,10 @@ sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 ### Launch
-* mkdir data
-* sudo docker-compose up
+```
+mkdir data
+sudo docker-compose up
+```
 
 ### Manually examining containers
 `sudo docker exec -it <containername> bash`
