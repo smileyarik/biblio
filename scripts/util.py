@@ -2,6 +2,7 @@ import os
 import csv
 import json
 import random
+from datetime import datetime
 
 
 def read_csv(
@@ -9,11 +10,13 @@ def read_csv(
     delimiter=";",
     encoding='utf-8-sig',
     save_fields=None,
-    sample_rate=1.0
+    sample_rate=1.0,
+    header=None
 ):
     with open(file_name, encoding=encoding) as r:
         reader = csv.reader(r, delimiter=delimiter)
-        header = next(reader)
+        if header is None:
+            header = next(reader)
         for row in reader:
             record = dict(zip(header, row))
             record.pop('', None)
@@ -65,6 +68,15 @@ def read_json(path, save_fields=None):
             records = [{k: v for k, v in r.items() if k in save_fields} for r in records]
     return records
 
+
 def write_json(path, items):
     with open(path, "w", encoding="utf-8") as w:
         json.dump(items, w, ensure_ascii=False, sort_keys=True, indent=4)
+
+
+def datetime_to_ts(dt):
+    return int(datetime.strptime(dt, '%Y-%m-%d %H:%M:%S').timestamp())
+
+
+def date_to_ts(dt):
+    return int(datetime.strptime(dt, '%d.%m.%Y').timestamp())

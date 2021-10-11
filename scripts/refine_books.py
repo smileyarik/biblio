@@ -1,10 +1,5 @@
 import argparse
-import sys
-import json
-import os
-import random
 import string
-from datetime import datetime
 from collections import defaultdict
 
 from util import read_csv_files, read_json, write_jsonl
@@ -110,8 +105,8 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', type=str, required=True)
-    parser.add_argument('--items-directory', type=str, default=".")
+    parser.add_argument('--items-directory', type=str, required=True)
     parser.add_argument('--items-prefix', type=str, default="cat_")
-    parser.add_argument('--new-items-path', type=str, default="items.json")
+    parser.add_argument('--new-items-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

@@ -14,7 +14,7 @@ def main(
             "model": "recsys.book",
             "pk": item["id"],
             "fields": {
-                "title": item["title"][:512],
+                "title": item["title"],
                 "author": author[:512] if author else None,
                 "id": item["id"],
                 "uniq_id": item["uniq_id"]
