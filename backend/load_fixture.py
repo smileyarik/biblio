@@ -1,10 +1,21 @@
-import os
 import sys
-from django.db import transaction
-from django.core.management import call_command
+import os
+from collections import defaultdict
+from django.core import serializers
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-django.setup()
-with transaction.atomic():
-    call_command('loaddata', sys.argv[1])
+if __name__ == "__main__":
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'backend.settings')
+    django.setup()
+    file_name = sys.argv[1]
+
+    obj_dict = defaultdict(list)
+    with open(file_name) as r:
+        deserialized = serializers.deserialize("json", r)
+
+    for item in deserialized:
+        obj = item.object
+        obj_dict[obj.__class__].append(obj) 
+
+    for cls, objs in obj_dict.items():
+        cls.objects.bulk_create(objs)

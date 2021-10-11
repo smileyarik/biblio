@@ -13,8 +13,8 @@ class MachineLearningModel(models.Model):
 
 class Book(models.Model):
     id = models.IntegerField(unique=True, primary_key=True)
-    title = models.CharField(max_length=512)
-    author = models.CharField(max_length=512, null=True)
+    title = models.CharField(max_length=2048)
+    author = models.CharField(max_length=2048, null=True)
     uniq_id = models.IntegerField()
 
     def __str__(self):

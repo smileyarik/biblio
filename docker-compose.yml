@@ -1,0 +1,25 @@
+version: '3.1'
+services:
+    postgres:
+        image: postgres
+        restart: always
+        environment:
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_USER=postgres
+            - POSTGRES_DB=postgres
+        volumes:
+            - ./data/pg:/var/lib/postgresql/data
+        ports:
+            - 5432:5432
+    backend:
+        container_name: backend
+        restart: always
+        build: ./backend
+        depends_on:
+            - "postgres"
+        volumes:
+            - ./data:/data
+        ports:
+            - 8000:8000
+        env_file:
+            - ./backend/.env.dev
