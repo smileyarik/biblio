@@ -47,13 +47,6 @@ with open(sys.argv[10]) as csvfile:
 
 print("Calc candidates")
 book_top = []
-rw_top = defaultdict(list)
-
-for user_id in rw:
-    #print('=====', user_id, len(rw[user_id]), '=====')
-    for item_id in rw[user_id]:
-        rw_top[user_id].append((item_id,rw[user_id][item_id]))
-    rw_top[user_id] = sorted(rw_top[user_id], key=lambda x: -x[1])
 
 for item_id,item in items.items():
     item_size = float(item.get(OT_GLOBAL, CT_BOOKING, RT_30D, '', 0))
@@ -74,11 +67,23 @@ cd_out = open(sys.argv[9], 'w')
 
 print("Calc features")
 cd = column_description()
+
+count = 0
+
 for user_id in target_users:
+    if count % 1000 == 0:
+        print(count, 'of', len(target_users))
+    count += 1
+
+    rw_top = []
+    for item_id in rw[user_id]:
+        rw_top.append((item_id,rw[user_id][item_id]))
+    rw_top = sorted(rw_top, key=lambda x: -x[1])
+
     user = users[user_id]
     top = book_top[0:poptop]
     stop = set([x for x,y in top])
-    for item_id,rank in rw_top[user_id]:
+    for item_id,rank in rw_top:
         if item_id not in stop and item_id not in filter_items[user_id]:
             top.append((item_id, rank))
         if len(top) == items_per_group:
@@ -103,11 +108,13 @@ for user_id in target_users:
     if len(target_items[user_id]) > 0 and found_target == 0:
         continue
 
-    user.print_debug()
+    if user_id == 262181:
+        user.print_debug()
     for item_id,item_size in top:
         item = items[item_id]
-        #print('=======', item_id, '=======')
-        #item.print_debug()
+        if (user_id == 262181 and (item_id == 456976 or item_id == 54016)):
+            print('=======', item_id, '=======')
+            item.print_debug()
         item_size = float(item.get(OT_GLOBAL, CT_BOOKING, RT_SUM, '', 0))
         target = 1 if item_id in target_items[user_id] else 0
         f = []
@@ -121,15 +128,17 @@ for user_id in target_users:
         # OT_ITEM = 0; OT_USER = 1; OT_AUTHOR = 2; OT_LIBRARY = 3; OT_RUBRIC = 4; OT_PERSON = 5; OT_SERIES = 6; OT_AGE = 7;
         for rt in [RT_SUM, RT_7D, RT_30D]:
             f.append(counter_cos(user, item, OT_AUTHOR, CT_BOOKING_BY, CT_HAS, rt, RT_SUM, ts))
-            cd.add('author_cos')
+            cd.add('author_cos_rt%d'%rt)
             f.append(counter_cos(user, item, OT_LIBRARY, CT_BOOKING, CT_BOOKING, rt, RT_SUM, ts))
-            cd.add('library_cos')
+            cd.add('library_cos_rt%d'%rt)
             f.append(counter_cos(user, item, OT_RUBRIC, CT_BOOKING_BY, CT_HAS, rt, RT_SUM, ts))
-            cd.add('rubric_cos')
+            cd.add('rubric_cos_rt%d'%rt)
             f.append(counter_cos(user, item, OT_PERSON, CT_BOOKING_BY, CT_HAS, rt, RT_SUM, ts))
-            cd.add('person_cos')
-            f.append(counter_cos(user, item, OT_SERIES, CT_BOOKING_BY, CT_HAS, rt, RT_SUM, ts, dbg=True))
-            cd.add('series_cos')
+            cd.add('person_cos_rt%d'%rt)
+
+            debg = (user_id == 262181 and (item_id == 456976 or item_id == 54016))
+            f.append(counter_cos(user, item, OT_SERIES, CT_BOOKING_BY, CT_HAS, rt, RT_SUM, ts, dbg=debg))
+            cd.add('series_cos_rt%d'%rt)
 
         for rt in [RT_SUM, RT_7D, RT_30D]:
             f.append(float(user.get(OT_GLOBAL, CT_BOOKING, rt, '', ts)))
