@@ -13,9 +13,9 @@ if __name__ == "__main__":
     with open(file_name) as r:
         deserialized = serializers.deserialize("jsonl", r)
 
-    for item in deserialized:
-        obj = item.object
-        obj_dict[obj.__class__].append(obj)
+        for item in deserialized:
+            obj = item.object
+            obj_dict[obj.__class__].append(obj)
 
     for cls, objs in obj_dict.items():
         cls.objects.bulk_create(objs)

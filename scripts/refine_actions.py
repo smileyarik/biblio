@@ -47,6 +47,7 @@ def main(
                 "item_id": int(a["catalogueRecordID"]),
                 "user_id": int(a["readerID"]),
                 "ts": date_to_ts(a["startDate"]),
+                "duration": date_to_ts(a["endDate"]) - date_to_ts(a["startDate"]),
                 "type": "take",
                 "has_bad_item": False,
                 "has_bad_user": False
@@ -77,6 +78,7 @@ def main(
                 "user_id": int(a["user_id"]) + new_user_offset,
                 "item_id": int(a["source_url"].split("/")[-2]),
                 "ts": datetime_to_ts(a["dt"]),
+                "duration": -1,
                 "type": a["event"],
                 "has_bad_item": False,
                 "has_bad_user": False

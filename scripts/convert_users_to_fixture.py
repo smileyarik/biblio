@@ -9,16 +9,11 @@ def main(
     items = read_jsonl(input_path)
     django_items = []
     for item in items:
-        author = item["author"]
-        author = author[:512] if author else None
         django_item = {
-            "model": "recsys.book",
+            "model": "recsys.user",
             "pk": item["id"],
             "fields": {
-                "title": item["title"],
-                "author": author,
                 "id": item["id"],
-                "uniq_id": item["uniq_id"]
             }
         }
         django_items.append(django_item)
