@@ -13,7 +13,8 @@
         {% for book in recommendations %}
         <div class="card mt-3 border-success">
             <div class="card-body">
-                <h5 class="card-text">{{ book.title }}</h5>
+                <h5 class="card-text float-start mb-0">{{ book.title }}</h5>
+                <a class="float-end" href="https://www.mos.ru/knigi/book/{{ book.id }}" target="_blank">mos.ru</a>
             </div>
             <div class="card-footer">
                 <small class="text-muted fst-italic">#{{ book.id }} — {{ book.author}}</small>
