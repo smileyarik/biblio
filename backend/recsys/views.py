@@ -1,5 +1,10 @@
 import random
 
+from distutils.util import strtobool
+
+from django.http import HttpResponse
+from django.template import loader
+
 from rest_framework import views, viewsets
 from rest_framework.response import Response
 
@@ -26,6 +31,10 @@ class RecPredictView(views.APIView):
             "recommendations": [],
             "history": books
         }
+
+        if strtobool(request.GET.get("view", "false")):
+            template = loader.get_template('recsys/predict.html')
+            return HttpResponse(template.render(response))
         return Response(response)
 
 
