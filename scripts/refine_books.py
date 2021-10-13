@@ -18,9 +18,9 @@ def main(
         encoding="cp1251"
     )
     author_to_id = { a['author'] : int(a['id']) for a in authors_gen }
-    print("{} biblio/authors processed".format(len(author_to_id)))
+    print("... {} biblio/authors read".format(len(author_to_id)))
 
-    print("Processing main items...")
+    print("Reading biblio/items...")
     items_gen = read_csv_files(
         directory=biblio_directory,
         pattern=items_pattern,
@@ -61,9 +61,9 @@ def main(
         items.append(record)
 
     items = {r["id"]: r for r in items}
-    print("{} main items processed".format(len(items)))
+    print("... {} biblio/items processed".format(len(items)))
 
-    print("Processing new items...")
+    print("Reading site/items...")
     for r in read_json(new_items_path):
         record = {
             "author": r.pop("author_fullName"),
@@ -88,7 +88,7 @@ def main(
             items[rid]["meta"].update(record["meta"])
             continue
         items[rid] = record
-    print("{} items overall".format(len(items)))
+    print("... {} items overall".format(len(items)))
 
     print("Calculating uniq_id...")
     buckets = defaultdict(list)
