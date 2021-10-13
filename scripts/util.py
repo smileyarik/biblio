@@ -1,3 +1,4 @@
+import glob
 import os
 import csv
 import json
@@ -28,25 +29,22 @@ def read_csv(
 
 def read_csv_files(
     directory,
-    prefix,
+    pattern,
     delimiter=";",
     encoding='utf-8-sig',
     save_fields=None,
     sample_rate=1.0
 ):
-    for file_name in os.listdir(directory):
-        full_path = os.path.join(directory, file_name)
-        assert os.path.exists(full_path)
-        if file_name.startswith(prefix):
-            file_gen = read_csv(
-                file_name=full_path,
-                delimiter=delimiter,
-                encoding=encoding,
-                save_fields=save_fields,
-                sample_rate=sample_rate
-            )
-            for record in file_gen:
-                yield record
+    for file_name in glob.iglob(os.path.join(directory, pattern)):
+        file_gen = read_csv(
+            file_name=file_name,
+            delimiter=delimiter,
+            encoding=encoding,
+            save_fields=save_fields,
+            sample_rate=sample_rate
+        )
+        for record in file_gen:
+            yield record
 
 
 def write_jsonl(path, items):

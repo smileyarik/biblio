@@ -5,22 +5,37 @@ from collections import defaultdict
 from util import read_csv_files, read_json, write_jsonl
 
 def main(
-    items_directory,
-    items_prefix,
+    biblio_directory,
+    items_pattern,
+    authors_pattern,
     new_items_path,
     output_path
 ):
+    print("Reading biblio/authors...")
+    authors_gen = read_csv_files(
+        directory=biblio_directory,
+        pattern=authors_pattern,
+        encoding="cp1251"
+    )
+    author_to_id = { a['author'] : int(a['id']) for a in authors_gen }
+    print("{} biblio/authors processed".format(len(author_to_id)))
+
     print("Processing main items...")
     items_gen = read_csv_files(
-        directory=items_directory,
-        prefix=items_prefix,
+        directory=biblio_directory,
+        pattern=items_pattern,
         encoding="cp1251"
     )
 
     items = []
     for r in items_gen:
+        author = r.pop("aut")
+        if author == "":
+            author = None
+
         record = {
-            "author": r.pop("aut"),
+            "author": author,
+            "author_id": author_to_id.get(author, None),
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
@@ -39,8 +54,6 @@ def main(
         for key, value in list(record["meta"].items()):
             if value == '' or value == ['']:
                 record["meta"].pop(key)
-        if record["author"] == "":
-            record["author"] = None
         if not record["id"]:
             continue
         if not record["title"]:
@@ -105,8 +118,9 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', type=str, required=True)
-    parser.add_argument('--items-directory', type=str, required=True)
-    parser.add_argument('--items-prefix', type=str, default="cat_")
+    parser.add_argument('--biblio-directory', type=str, required=True)
+    parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
+    parser.add_argument('--authors-pattern', type=str, default="authors.csv")
     parser.add_argument('--new-items-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

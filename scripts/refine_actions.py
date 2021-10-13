@@ -9,7 +9,7 @@ from util import read_csv_files, read_csv, date_to_ts, datetime_to_ts, read_json
 
 def main(
     actions_directory,
-    actions_prefix,
+    actions_pattern,
     new_actions_path,
     output_path,
     refined_books_path,
@@ -32,7 +32,7 @@ def main(
     print("Processing main actions...")
     actions_gen = read_csv_files(
         directory=actions_directory,
-        prefix=actions_prefix,
+        pattern=actions_pattern,
         encoding="cp1251"
     )
 
@@ -47,7 +47,7 @@ def main(
                 "item_id": int(a["catalogueRecordID"]),
                 "user_id": int(a["readerID"]),
                 "ts": date_to_ts(a["startDate"]),
-                "duration": date_to_ts(a["endDate"]) - date_to_ts(a["startDate"]),
+                "duration": date_to_ts(a["finishDate"]) - date_to_ts(a["startDate"]),
                 "type": "take",
                 "has_bad_item": False,
                 "has_bad_user": False
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', type=str, required=True)
     parser.add_argument('--actions-directory', type=str, required=True)
-    parser.add_argument('--actions-prefix', type=str, default="circ")
+    parser.add_argument('--actions-pattern', type=str, default="circulaton_*.csv")
     parser.add_argument('--new-actions-path', type=str, required=True)
     parser.add_argument('--refined-books-path', type=str, required=True)
     parser.add_argument('--refined-users-path', type=str, required=True)
