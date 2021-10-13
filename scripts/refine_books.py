@@ -4,21 +4,51 @@ from collections import defaultdict
 
 from util import read_csv_files, read_json, write_jsonl
 
+
+def read_feature_to_id(
+    directory,
+    pattern,
+    feature
+):
+    gen = read_csv_files(
+        directory=directory,
+        pattern=pattern,
+        encoding="cp1251"
+    )
+    return { a[feature] : int(a["id"]) for a in gen }
+
+def process_feature(
+    value,
+    separator,
+    mapping
+):
+    features = []
+    for feature in value.split(separator):
+        if not feature:
+            continue
+        features.append({ "id": mapping.get(feature), "name": feature })
+    return features
+
 def main(
     biblio_directory,
     items_pattern,
     authors_pattern,
+    rubrics_pattern,
+    series_pattern,
     new_items_path,
     output_path
 ):
     print("Reading biblio/authors...")
-    authors_gen = read_csv_files(
-        directory=biblio_directory,
-        pattern=authors_pattern,
-        encoding="cp1251"
-    )
-    author_to_id = { a['author'] : int(a['id']) for a in authors_gen }
+    author_to_id = read_feature_to_id(biblio_directory, authors_pattern, "author")
     print("... {} biblio/authors read".format(len(author_to_id)))
+
+    print("Reading biblio/rubrics...")
+    rubric_to_id = read_feature_to_id(biblio_directory, rubrics_pattern, "rubrics")
+    print("... {} biblio/rubrics read".format(len(rubric_to_id)))
+
+    print("Reading biblio/series...")
+    serial_to_id = read_feature_to_id(biblio_directory, series_pattern, "serial")
+    print("... {} biblio/series read".format(len(serial_to_id)))
 
     print("Reading biblio/items...")
     items_gen = read_csv_files(
@@ -34,8 +64,10 @@ def main(
             author = None
 
         record = {
-            "author": author,
-            "author_id": author_to_id.get(author, None),
+            "author": {
+                "id": author_to_id.get(author),
+                "name": author
+            },
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
@@ -43,8 +75,8 @@ def main(
                 "publisher": r.pop("publ"),
                 "year": r.pop("yea"),
                 "language": r.pop("lan"),
-                "rubrics": r.pop("rubrics").split(" : "),
-                "series": r.pop("serial").split(" : "),
+                "rubrics": process_feature(r.pop("rubrics"), " : ", rubric_to_id),
+                "series": process_feature(r.pop("serial"), " : ", serial_to_id),
                 "type": r.pop("material"),
                 "age_rating": r.pop("ager"),
                 "persons": r.pop("person").split(" , "),
@@ -65,21 +97,29 @@ def main(
 
     print("Reading site/items...")
     for r in read_json(new_items_path):
+        rubric = {
+            "id": r.pop("rubric_id"),
+            "name": r.pop("rubric_name")
+        }
+        if not rubric["id"] and not rubric["name"]:
+            rubric = None
+
         record = {
-            "author": r.pop("author_fullName"),
+            "author": {
+                "id": r.pop("author_id"),
+                "name": r.pop("author_fullName")
+            },
             "id": int(r.pop("id")),
             "title": r.pop("title"),
             "meta": {
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
                 "year": r.pop("year_value"),
-                "rubrics": r.pop("rubric_name"),
+                "rubrics": [rubric] if rubric else [],
                 "isbn": r.pop("isbn"),
                 "annotation": r.pop("annotation")
             }
         }
-        if record["meta"]["rubrics"]:
-            record["meta"]["rubrics"] = record["meta"]["rubrics"].split(" : ")
         for key, value in list(record["meta"].items()):
             if value == '' or value == ['']:
                 record["meta"].pop(key)
@@ -94,7 +134,7 @@ def main(
     buckets = defaultdict(list)
     for _, item in items.items():
         title = item["title"].lower()
-        author = item["author"].lower() if item["author"] else ""
+        author = item["author"]["name"].lower() if item["author"]["name"] else ""
 
         orig_key = title + " " + author
         key = orig_key.translate(str.maketrans('', '', string.punctuation))
@@ -121,6 +161,8 @@ if __name__ == "__main__":
     parser.add_argument('--biblio-directory', type=str, required=True)
     parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
     parser.add_argument('--authors-pattern', type=str, default="authors.csv")
+    parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
+    parser.add_argument('--series-pattern', type=str, default="series.csv")
     parser.add_argument('--new-items-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
