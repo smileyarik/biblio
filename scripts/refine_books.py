@@ -17,17 +17,15 @@ def read_feature_to_id(
     )
     return { a[feature] : int(a["id"]) for a in gen }
 
-def process_feature(
-    value,
-    separator,
-    mapping
-):
-    features = []
-    for feature in value.split(separator):
-        if not feature:
-            continue
-        features.append({ "id": mapping.get(feature), "name": feature })
-    return features
+def process_biblio_feature(value, mapping):
+    return { "id": mapping.get(value), "name": value } if value else None
+def process_biblio_features(values, separator, mapping):
+    return [process_biblio_feature(value, mapping) for value in values.split(separator) if value]
+
+def process_site_feature(id, name):
+    if not id and not name:
+        return None
+    return { "id": id, "name": name }
 
 def main(
     biblio_directory,
@@ -59,15 +57,8 @@ def main(
 
     items = []
     for r in items_gen:
-        author = r.pop("aut")
-        if author == "":
-            author = None
-
         record = {
-            "author": {
-                "id": author_to_id.get(author),
-                "name": author
-            },
+            "author": process_biblio_feature(r.pop("aut"), author_to_id),
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
@@ -75,8 +66,8 @@ def main(
                 "publisher": r.pop("publ"),
                 "year": r.pop("yea"),
                 "language": r.pop("lan"),
-                "rubrics": process_feature(r.pop("rubrics"), " : ", rubric_to_id),
-                "series": process_feature(r.pop("serial"), " : ", serial_to_id),
+                "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
+                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
                 "type": r.pop("material"),
                 "age_rating": r.pop("ager"),
                 "persons": r.pop("person").split(" , "),
@@ -97,18 +88,10 @@ def main(
 
     print("Reading site/items...")
     for r in read_json(new_items_path):
-        rubric = {
-            "id": r.pop("rubric_id"),
-            "name": r.pop("rubric_name")
-        }
-        if not rubric["id"] and not rubric["name"]:
-            rubric = None
+        rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
 
         record = {
-            "author": {
-                "id": r.pop("author_id"),
-                "name": r.pop("author_fullName")
-            },
+            "author": process_site_feature(r.pop("author_id"), r.pop("author_fullName")),
             "id": int(r.pop("id")),
             "title": r.pop("title"),
             "meta": {
@@ -134,7 +117,7 @@ def main(
     buckets = defaultdict(list)
     for _, item in items.items():
         title = item["title"].lower()
-        author = item["author"]["name"].lower() if item["author"]["name"] else ""
+        author = item["author"]["name"].lower() if item["author"] else ""
 
         orig_key = title + " " + author
         key = orig_key.translate(str.maketrans('', '', string.punctuation))
