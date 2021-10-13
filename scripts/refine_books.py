@@ -1,7 +1,8 @@
 import argparse
+import os
 import string
-from collections import defaultdict
 
+from collections import defaultdict
 from util import read_csv_files, read_json, write_jsonl
 
 
@@ -28,7 +29,7 @@ def process_site_feature(id, name):
     return { "id": id, "name": name }
 
 def main(
-    biblio_directory,
+    input_directory,
     items_pattern,
     authors_pattern,
     rubrics_pattern,
@@ -37,20 +38,20 @@ def main(
     output_path
 ):
     print("Reading biblio/authors...")
-    author_to_id = read_feature_to_id(biblio_directory, authors_pattern, "author")
+    author_to_id = read_feature_to_id(input_directory, authors_pattern, "author")
     print("... {} biblio/authors read".format(len(author_to_id)))
 
     print("Reading biblio/rubrics...")
-    rubric_to_id = read_feature_to_id(biblio_directory, rubrics_pattern, "rubrics")
+    rubric_to_id = read_feature_to_id(input_directory, rubrics_pattern, "rubrics")
     print("... {} biblio/rubrics read".format(len(rubric_to_id)))
 
     print("Reading biblio/series...")
-    serial_to_id = read_feature_to_id(biblio_directory, series_pattern, "serial")
+    serial_to_id = read_feature_to_id(input_directory, series_pattern, "serial")
     print("... {} biblio/series read".format(len(serial_to_id)))
 
     print("Reading biblio/items...")
     items_gen = read_csv_files(
-        directory=biblio_directory,
+        directory=input_directory,
         pattern=items_pattern,
         encoding="cp1251"
     )
@@ -87,7 +88,7 @@ def main(
     print("... {} biblio/items processed".format(len(items)))
 
     print("Reading site/items...")
-    for r in read_json(new_items_path):
+    for r in read_json(os.path.join(input_directory, new_items_path)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
 
@@ -142,12 +143,12 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output-path', type=str, required=True)
-    parser.add_argument('--biblio-directory', type=str, required=True)
+    parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
     parser.add_argument('--authors-pattern', type=str, default="authors.csv")
     parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
     parser.add_argument('--series-pattern', type=str, default="series.csv")
-    parser.add_argument('--new-items-path', type=str, required=True)
+    parser.add_argument('--new-items-path', type=str, default="books.jsn")
+    parser.add_argument('--output-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
