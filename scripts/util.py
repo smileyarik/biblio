@@ -3,7 +3,7 @@ import os
 import csv
 import json
 import random
-from datetime import datetime
+import datetime
 
 
 def read_csv(
@@ -73,8 +73,8 @@ def write_json(path, items):
 
 
 def datetime_to_ts(dt):
-    return int(datetime.strptime(dt, '%Y-%m-%d %H:%M:%S').timestamp())
+    return int(datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S').timestamp())
 
 
 def date_to_ts(dt):
-    return int(datetime.strptime(dt, '%d.%m.%Y').timestamp())
+    return int(datetime.datetime.strptime(dt, '%d.%m.%Y').timestamp())
