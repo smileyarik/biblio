@@ -32,6 +32,7 @@ def main(
     input_directory,
     items_pattern,
     authors_pattern,
+    persons_pattern,
     rubrics_pattern,
     series_pattern,
     new_items_path,
@@ -48,6 +49,10 @@ def main(
     print("Reading biblio/series...")
     serial_to_id = read_feature_to_id(input_directory, series_pattern, "serial")
     print("... {} biblio/series read".format(len(serial_to_id)))
+
+    print("Reading biblio/persons...")
+    person_to_id = read_feature_to_id(input_directory, persons_pattern, "person")
+    print("... {} biblio/persons read".format(len(person_to_id)))
 
     print("Reading biblio/items...")
     items_gen = read_csv_files(
@@ -71,7 +76,7 @@ def main(
                 "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
                 "type": r.pop("material"),
                 "age_rating": r.pop("ager"),
-                "persons": r.pop("person").split(" , "),
+                "persons": process_biblio_features(r.pop("person"), (" , "), person_to_id),
                 "level": r.pop("biblevel")
             }
         }
@@ -85,7 +90,7 @@ def main(
         items.append(record)
 
     items = {r["id"]: r for r in items}
-    print("... {} biblio/items processed".format(len(items)))
+    print("... {} biblio/items read".format(len(items)))
 
     print("Reading site/items...")
     for r in read_json(os.path.join(input_directory, new_items_path)):
@@ -103,6 +108,7 @@ def main(
                 "rubrics": [rubric] if rubric else [],
                 "series": [serial] if serial else [],
                 "isbn": r.pop("isbn"),
+                # TODO: add "persons"
                 "annotation": r.pop("annotation")
             }
         }
@@ -114,7 +120,7 @@ def main(
             items[rid]["meta"].update(record["meta"])
             continue
         items[rid] = record
-    print("... {} items overall".format(len(items)))
+    print("... {} items read overall".format(len(items)))
 
     print("Calculating uniq_id...")
     buckets = defaultdict(list)
@@ -146,6 +152,7 @@ if __name__ == "__main__":
     parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
     parser.add_argument('--authors-pattern', type=str, default="authors.csv")
+    parser.add_argument('--persons-pattern', type=str, default="persons.csv")
     parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
     parser.add_argument('--series-pattern', type=str, default="series.csv")
     parser.add_argument('--new-items-path', type=str, default="books.jsn")
