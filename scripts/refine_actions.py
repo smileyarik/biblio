@@ -5,33 +5,33 @@ import os
 from tqdm import tqdm
 
 from util import read_csv_files, read_csv, date_to_ts, datetime_to_ts, read_jsonl
+from util import BIBLIO_USERS_ID_OFFSET, BIBLIO_ACTIONS_ID_OFFSET
 
 
 def main(
-    actions_directory,
+    input_directory,
     actions_pattern,
     new_actions_path,
     output_path,
-    refined_books_path,
+    refined_items_path,
     refined_users_path
 ):
 
     print("Reading items...")
-    assert os.path.exists(refined_books_path)
-    items = read_jsonl(refined_books_path)
+    assert os.path.exists(refined_items_path)
+    items = read_jsonl(refined_items_path)
     items = {item["id"]: item for item in items}
-    print("{} items read".format(len(items)))
+    print("... {} items read".format(len(items)))
 
     print("Reading users...")
     assert os.path.exists(refined_users_path)
     users = list(read_jsonl(refined_users_path))
-    new_user_offset = min([u["id"] for u in users if u["type"] == "site"]) - 1
     users = {user["id"]: user for user in users}
-    print("{} users read".format(len(users)))
+    print("... {} users read".format(len(users)))
 
     print("Processing main actions...")
     actions_gen = read_csv_files(
-        directory=actions_directory,
+        directory=input_directory,
         pattern=actions_pattern,
         encoding="cp1251"
     )
@@ -42,10 +42,11 @@ def main(
     max_action_id = 0
     with open(output_path, "w") as w:
         for a in tqdm(actions_gen):
+            user_id = int(a["readerID"]) + BIBLIO_USERS_ID_OFFSET
             action = {
-                "id": int(a["circulationID"]),
+                "id": int(a["circulationID"]) + BIBLIO_ACTIONS_ID_OFFSET,
                 "item_id": int(a["catalogueRecordID"]),
-                "user_id": int(a["readerID"]),
+                "user_id": user_id,
                 "ts": date_to_ts(a["startDate"]),
                 "duration": date_to_ts(a["finishDate"]) - date_to_ts(a["startDate"]),
                 "type": "take",
@@ -57,11 +58,8 @@ def main(
                 action["has_bad_item"] = True
             item = items.get(action["item_id"], {})
 
-            if not action["has_bad_item"] and action["user_id"] not in users:
-                bad_actions_by_user_count += 1
-                action["has_bad_user"] = True
-            user = users.get(action["user_id"], {})
-            if not action["has_bad_item"] and user and user["type"] != "biblio":
+            user = users[action["user_id"]]
+            if user["actions_count"] >= 500:
                 bad_actions_by_user_count += 1
                 action["has_bad_user"] = True
 
@@ -69,13 +67,13 @@ def main(
             max_action_id = max(max_action_id, action["id"])
             actions_count += 1
             w.write(json.dumps(action, ensure_ascii=False).strip() + "\n")
-        print("{} actions processed".format(actions_count))
+        print("... {} actions processed".format(actions_count))
 
         print("Processing new actions...")
-        for i, a in enumerate(tqdm(read_csv(new_actions_path))):
+        for i, a in enumerate(tqdm(read_csv(os.path.join(input_directory, new_actions_path)))):
             action = {
-                "id": max_action_id + i + 1,
-                "user_id": int(a["user_id"]) + new_user_offset,
+                "id": i,
+                "user_id": int(a["user_id"]),
                 "item_id": int(a["source_url"].split("/")[-2]),
                 "ts": datetime_to_ts(a["dt"]),
                 "duration": -1,
@@ -88,18 +86,18 @@ def main(
             action["item_uniq_id"] = item["uniq_id"]
             actions_count += 1
             w.write(json.dumps(action, ensure_ascii=False).strip() + "\n")
-        print("{} actions overall".format(actions_count))
-        print("{} bad actions by item".format(bad_actions_by_item_count))
-        print("{} bad actions by user".format(bad_actions_by_user_count))
+        print("... {} actions overall".format(actions_count))
+        print("... {} bad actions by item".format(bad_actions_by_item_count))
+        print("... {} bad actions by user".format(bad_actions_by_user_count))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--output-path', type=str, required=True)
-    parser.add_argument('--actions-directory', type=str, required=True)
+    parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--actions-pattern', type=str, default="circulaton_*.csv")
-    parser.add_argument('--new-actions-path', type=str, required=True)
-    parser.add_argument('--refined-books-path', type=str, required=True)
+    parser.add_argument('--new-actions-path', type=str, default="actions.csv")
+    parser.add_argument('--refined-items-path', type=str, required=True)
     parser.add_argument('--refined-users-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

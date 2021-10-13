@@ -18,15 +18,20 @@ def read_feature_to_id(
     )
     return { a[feature] : int(a["id"]) for a in gen }
 
+
 def process_biblio_feature(value, mapping):
     return { "id": mapping.get(value), "name": value } if value else None
+
+
 def process_biblio_features(values, separator, mapping):
     return [process_biblio_feature(value, mapping) for value in values.split(separator) if value]
+
 
 def process_site_feature(id, name):
     if not id and not name:
         return None
     return { "id": id, "name": name }
+
 
 def main(
     input_directory,
@@ -133,7 +138,7 @@ def main(
     for bucket_num, (_, bucket) in enumerate(buckets.items()):
         for item_id in bucket:
             items[item_id]["uniq_id"] = bucket_num
-    print("{} buckets".format(len(buckets)))
+    print("... {} buckets".format(len(buckets)))
 
     print("Writing to {}...".format(output_path))
     items_plain = list(items.values())

@@ -6,6 +6,10 @@ import random
 import datetime
 
 
+BIBLIO_USERS_ID_OFFSET = 10000000
+BIBLIO_ACTIONS_ID_OFFSET = 100000000
+
+
 def read_csv(
     file_name,
     delimiter=";",
