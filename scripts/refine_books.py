@@ -89,6 +89,7 @@ def main(
     print("Reading site/items...")
     for r in read_json(new_items_path):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
+        serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
 
         record = {
             "author": process_site_feature(r.pop("author_id"), r.pop("author_fullName")),
@@ -99,6 +100,7 @@ def main(
                 "publisher": r.pop("publisher_name"),
                 "year": r.pop("year_value"),
                 "rubrics": [rubric] if rubric else [],
+                "series": [serial] if serial else [],
                 "isbn": r.pop("isbn"),
                 "annotation": r.pop("annotation")
             }
