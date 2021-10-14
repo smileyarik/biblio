@@ -3,6 +3,7 @@ import os
 import string
 
 from collections import defaultdict
+from tqdm import tqdm
 from util import read_csv_files, read_json, write_jsonl
 
 
@@ -67,7 +68,7 @@ def main(
     )
 
     items = []
-    for r in items_gen:
+    for r in tqdm(items_gen):
         record = {
             "author": process_biblio_feature(r.pop("aut"), author_to_id),
             "title": r.pop("title"),
@@ -98,15 +99,21 @@ def main(
     print("... {} biblio/items read".format(len(items)))
 
     print("Reading site/items...")
-    for r in read_json(os.path.join(input_directory, new_items_path)):
+    for r in tqdm(read_json(os.path.join(input_directory, new_items_path))):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
+
+        library_availability = []
+        if library_availability := r.get("libraryAvailability", None):
+            library_availability = [{"id": l["libraryId"], "count": l["totalOutCount"]} for l in library_availability]
 
         record = {
             "author": process_site_feature(r.pop("author_id"), r.pop("author_fullName")),
             "id": int(r.pop("id")),
             "title": r.pop("title"),
             "meta": {
+                "is_site": True,
+                "library_availability": library_availability,
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
                 "year": r.pop("year_value"),

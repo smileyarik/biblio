@@ -1,10 +1,20 @@
 import argparse
-from collections import Counter
+import datetime
 import os
 
+from collections import Counter
 from tqdm import tqdm
 
 from util import read_csv, write_jsonl, BIBLIO_USERS_ID_OFFSET, read_csv_files
+
+
+def process_date(value):
+    try:
+        d = datetime.datetime.strptime(value, "%d.%m.%Y")
+        return d.date().isoformat()
+    except:
+        return None
+
 
 def main(
     input_directory,
@@ -27,7 +37,8 @@ def main(
         users[user_id] = {
             "id": user_id,
             "type": "biblio",
-            "actions_count": 0
+            "actions_count": 0,
+            "meta": {}
         }
 
     print("Reading biblio/readers...")
@@ -36,21 +47,21 @@ def main(
         encoding="cp1251",
         header=("id", "birth_date", "address")
     )
-    for u in users_gen:
+    for u in tqdm(users_gen):
         user_id = int(u["id"]) + BIBLIO_USERS_ID_OFFSET
         user = {
             "id": user_id,
             "type": "biblio",
             "actions_count": 0,
             "meta": {
-                "birth_date": u["birth_date"],
+                "birth_date": process_date(u["birth_date"]),
                 "address": u["address"],
             }
         }
         users[user_id] = user
 
     print("Processing site/actions...")
-    for a in read_csv(os.path.join(input_directory, new_actions_file)):
+    for a in tqdm(read_csv(os.path.join(input_directory, new_actions_file))):
         user_id = int(a["user_id"])
         user = {
             "id": user_id,
