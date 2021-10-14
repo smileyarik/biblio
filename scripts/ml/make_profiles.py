@@ -2,7 +2,7 @@ import datetime
 import sys
 import csv
 import json
-from profiles import *
+from ml.profiles import *
 from collections import defaultdict
 import pickle
 import time

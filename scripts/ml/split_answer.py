@@ -3,8 +3,8 @@ import json
 from collections import defaultdict
 import csv
 import pickle
-from profiles import *
-from make_profiles import *
+from ml.profiles import *
+from ml.make_profiles import *
 
 users = pickle.load(open(sys.argv[1], 'rb'))
 

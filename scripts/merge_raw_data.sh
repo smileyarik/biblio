@@ -1,7 +1,7 @@
 #!/bin/bash
 
-INPUT_DIR="../raw_data"
-OUTPUT_DIR="../src_data"
+INPUT_DIR="temp"
+OUTPUT_DIR="temp2"
 
 cat $INPUT_DIR/circulaton_1.csv | head -1 > $OUTPUT_DIR/circulation.csv
 cat $INPUT_DIR/circulaton_* | iconv -f cp1251 -t utf8 | grep -v circulationID >> $OUTPUT_DIR/circulation.csv

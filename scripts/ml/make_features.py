@@ -1,9 +1,9 @@
 import pickle
 import sys
 import json
-from profiles import *
-from make_profiles import *
-from features_lib import *
+from ml.profiles import *
+from ml.make_profiles import *
+from ml.features_lib import *
 import time
 import os
 import datetime

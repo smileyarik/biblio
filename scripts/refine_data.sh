@@ -14,10 +14,10 @@ cd $TEMP_DIR && wget https://www.dropbox.com/s/b2adss0k8n65stx/cat_3.csv && cd .
 cd $TEMP_DIR && wget https://www.dropbox.com/s/nrositd7ceqid7p/circulaton_3.csv && cd ..
 
 echo "-----items-----"
-python3 scripts/refine_items.py --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/items.jsonl" --new-items-path items.json
+python3 -m prepare.refine_items --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/items.jsonl" --new-items-path items.json
 echo "-----users-----"
-python3 scripts/refine_users.py --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/users.jsonl"
+python3 -m prepare.refine_users --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/users.jsonl"
 echo "-----actions-----"
-python3 scripts/refine_actions.py --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/actions.jsonl" --refined-items-path "$OUTPUT_DIR/items.jsonl" --refined-users-path "$OUTPUT_DIR/users.jsonl"
+python3 -m prepare.refine_actions --input-directory $TEMP_DIR --output-path "$OUTPUT_DIR/actions.jsonl" --refined-items-path "$OUTPUT_DIR/items.jsonl" --refined-users-path "$OUTPUT_DIR/users.jsonl"
 
-rm -rf $TEMP_DIR
+#rm -rf $TEMP_DIR
