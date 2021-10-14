@@ -11,6 +11,7 @@ def main(
     end_train_ts,
     start_valid_ts,
     end_valid_ts,
+    output_directory,
     train_profile_actions_path,
     train_target_actions_path,
     valid_profile_actions_path,
@@ -50,9 +51,10 @@ if __name__ == "__main__":
     parser.add_argument('--end-train-ts', type=str, required=True)
     parser.add_argument('--start-valid-ts', type=str, required=True)
     parser.add_argument('--end-valid-ts', type=str, required=True)
-    parser.add_argument('--train-profile-actions-path', type=str, required=True)
-    parser.add_argument('--train-target-actions-path', type=str, required=True)
-    parser.add_argument('--valid-profile-actions-path', type=str, required=True)
-    parser.add_argument('--valid-target-actions-path', type=str, required=True)
+    parser.add_argument('--output-directory', type=str, required=True)
+    parser.add_argument('--train-profile-actions-path', type=str, default="train_profile_actions.jsonl")
+    parser.add_argument('--train-target-actions-path', type=str, default="train_target_actions.jsonl")
+    parser.add_argument('--valid-profile-actions-path', type=str, default="valid_profile_actions.jsonl")
+    parser.add_argument('--valid-target-actions-path', type=str, default="valid_target_actions.jsonl")
     args = parser.parse_args()
     main(**vars(args))
