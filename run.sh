@@ -47,15 +47,15 @@ catboost calc -m $TMP_DIR/tr_model.bin --cd $TMP_DIR/tr_cd.txt -o $TMP_DIR/vl_ou
 
 
 cat $TMP_DIR/vl_output.txt | awk 'NR>1' > $TMP_DIR/a_vl.txt;
-cat $TMP_DIR/vl_features.txt | gawk -vOFS='\t' '{print $1,$2}' > $TMP_DIR/b_vl.txt
+cat $TMP_DIR/vl_features.txt | awk -vOFS='\t' '{print $1,$2}' > $TMP_DIR/b_vl.txt
 paste $TMP_DIR/b_vl.txt $TMP_DIR/a_vl.txt > $TMP_DIR/c_vl.txt
 python3 make_result.py $TMP_DIR/c_vl.txt 3 > $TMP_DIR/answers_vl.txt
 
-cat $TMP_DIR/vl_features.txt | gawk -vOFS='\t' '{print $1,$2,$4*1000000+$24}' > $TMP_DIR/bb_vl.txt
+cat $TMP_DIR/vl_features.txt | awk -vOFS='\t' '{print $1,$2,$4*1000000+$24}' > $TMP_DIR/bb_vl.txt
 paste $TMP_DIR/bb_vl.txt $TMP_DIR/a_vl.txt > $TMP_DIR/cc_vl.txt
 python3 make_result.py $TMP_DIR/cc_vl.txt 2 > $TMP_DIR/answers_pr_vl.txt
 
-cat $TMP_DIR/vl_features.txt | gawk -vOFS='\t' '{print $1,$2,$24}' > $TMP_DIR/bb_vl.txt
+cat $TMP_DIR/vl_features.txt | awk -vOFS='\t' '{print $1,$2,$24}' > $TMP_DIR/bb_vl.txt
 paste $TMP_DIR/bb_vl.txt $TMP_DIR/a_vl.txt > $TMP_DIR/cc_vl.txt
 python3 make_result.py $TMP_DIR/cc_vl.txt 2 > $TMP_DIR/answers_pop_vl.txt
 
