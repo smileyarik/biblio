@@ -93,10 +93,6 @@ if __name__ == '__main__':
                     if f in series_to_id:
                         series_id = series_to_id[f]
                         item.set(OT_SERIES, CT_HAS, RT_SUM, series_id, 1, 0)
-            if item_id == 456976:
-                print('=====', item_id, type(item_id), '=====')
-                item.print_debug()
-
 
     print("Read books.jsn")
     with open(sys.argv[2]) as bookfile:
@@ -175,6 +171,8 @@ if __name__ == '__main__':
                     user.update_from(item, OT_PERSON, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
                     user.update_from(item, OT_SERIES, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
 
+    print('==========================')
+    item_counters[456976].print_debug()
 
     print("Dumping user profiles")
     user_counters_out = defaultdict(make_counters)
