@@ -1,7 +1,7 @@
 # biblio
 
 ## Data
-- **Основной набор**: https://www.dropbox.com/s/1dax0f3jhkyghl9/refined_data_v1.tar.gz
+- **Основной набор**: https://www.dropbox.com/s/stzruv7b0sawah5/refined_data_v2.tar.gz
 - Большая библиотечная база (книги и экшены): https://www.dropbox.com/s/se6zn98ulv3ga0w/other_actions.tar.gz
 - Книги с mos.ru: https://www.dropbox.com/s/bm87xst2bn084t8/items.json
 - Экшены с mos.ru: https://www.dropbox.com/s/gl5z0s4q7h9kyll/actions.csv
