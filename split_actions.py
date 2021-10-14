@@ -24,10 +24,10 @@ def main(
     start_valid_ts = _parse_ts(start_valid_ts)
     end_valid_ts = _parse_ts(end_valid_ts)
 
-    train_profile_actions_f = open(train_profile_actions_path, 'w')
-    train_target_actions_f = open(train_target_actions_path, 'w')
-    valid_profile_actions_f = open(valid_profile_actions_path, 'w')
-    valid_target_actions_f = open(valid_target_actions_path, 'w')
+    train_profile_actions_f = open(os.path.join(output_directory, train_profile_actions_path), 'w')
+    train_target_actions_f = open(os.path.join(output_directory, train_target_actions_path), 'w')
+    valid_profile_actions_f = open(os.path.join(output_directory, valid_profile_actions_path), 'w')
+    valid_target_actions_f = open(os.path.join(output_directory, valid_target_actions_path), 'w')
 
     with open(actions_path, 'r') as actions_f:
         for row in tqdm(actions_f):
