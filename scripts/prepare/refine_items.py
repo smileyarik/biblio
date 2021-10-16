@@ -1,10 +1,12 @@
 import argparse
 import os
 import string
-
+from itertools import chain
 from collections import defaultdict
+
 from tqdm import tqdm
-from util import read_csv_files, read_json, write_jsonl
+
+from util import read_csv_files, write_jsonl, read_jsonl, read_json
 
 
 def read_feature_to_id(
@@ -17,21 +19,21 @@ def read_feature_to_id(
         pattern=pattern,
         encoding="cp1251"
     )
-    return { a[feature] : int(a["id"]) for a in gen }
+    return {a[feature] : int(a["id"]) for a in gen}
 
 
 def process_biblio_feature(value, mapping):
-    return { "id": mapping.get(value), "name": value } if value else None
+    return {"id": mapping.get(value), "name": value} if value else None
 
 
 def process_biblio_features(values, separator, mapping):
     return [process_biblio_feature(value, mapping) for value in values.split(separator) if value]
 
 
-def process_site_feature(id, name):
-    if not id and not name:
+def process_site_feature(feature_id, name):
+    if not feature_id or not name:
         return None
-    return { "id": id, "name": name }
+    return {"id": feature_id, "name": name}
 
 
 def main(
@@ -41,7 +43,8 @@ def main(
     persons_pattern,
     rubrics_pattern,
     series_pattern,
-    new_items_path,
+    site_items_path,
+    site_small_items_path,
     output_path
 ):
     print("Reading biblio/authors...")
@@ -74,6 +77,7 @@ def main(
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
+                "is_site": False,
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
                 "year": r.pop("yea"),
@@ -83,11 +87,11 @@ def main(
                 "type": r.pop("material"),
                 "age_rating": r.pop("ager"),
                 "persons": process_biblio_features(r.pop("person"), (" , "), person_to_id),
-                "level": r.pop("biblevel")
+                "level": r.pop("biblevel"),
             }
         }
         for key, value in list(record["meta"].items()):
-            if value == '' or value == ['']:
+            if value == '' or value == [''] or value is None:
                 record["meta"].pop(key)
         if not record["id"]:
             continue
@@ -99,13 +103,11 @@ def main(
     print("... {} biblio/items read".format(len(items)))
 
     print("Reading site/items...")
-    for r in tqdm(read_json(os.path.join(input_directory, new_items_path))):
+    small_site_items = read_json(os.path.join(input_directory, site_small_items_path))
+    site_items = read_jsonl(os.path.join(input_directory, site_items_path))
+    for r in tqdm(chain(small_site_items, site_items)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
-
-        library_availability = []
-        if library_availability := r.get("libraryAvailability", None):
-            library_availability = [{"id": l["libraryId"], "count": l["totalOutCount"]} for l in library_availability]
 
         record = {
             "author": process_site_feature(r.pop("author_id"), r.pop("author_fullName")),
@@ -113,19 +115,19 @@ def main(
             "title": r.pop("title"),
             "meta": {
                 "is_site": True,
-                "library_availability": library_availability,
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
                 "year": r.pop("year_value"),
                 "rubrics": [rubric] if rubric else [],
                 "series": [serial] if serial else [],
                 "isbn": r.pop("isbn"),
-                # TODO: add "persons"
-                "annotation": r.pop("annotation")
+                "annotation": r.pop("annotation"),
+                "collapse_field": r.pop("collapse_field"),
+                "smart_collapse_field": r.pop("smart_collapse_field")
             }
         }
         for key, value in list(record["meta"].items()):
-            if value == '' or value == ['']:
+            if value == '' or value == [''] or value is None:
                 record["meta"].pop(key)
         rid = record["id"]
         if rid in items:
@@ -138,7 +140,9 @@ def main(
     buckets = defaultdict(list)
     for _, item in items.items():
         title = item["title"].lower()
-        author = item["author"]["name"].lower() if item["author"] else ""
+        author = ""
+        if item["author"] and "name" in item["author"]:
+            author = item["author"]["name"].lower()
 
         orig_key = title + " " + author
         key = orig_key.translate(str.maketrans('', '', string.punctuation))
@@ -167,7 +171,8 @@ if __name__ == "__main__":
     parser.add_argument('--persons-pattern', type=str, default="persons.csv")
     parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
     parser.add_argument('--series-pattern', type=str, default="series.csv")
-    parser.add_argument('--new-items-path', type=str, default="books.jsn")
+    parser.add_argument('--site-items-path', type=str, default="all_books.jsonl")
+    parser.add_argument('--site-small-items-path', type=str, default="items.json")
     parser.add_argument('--output-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

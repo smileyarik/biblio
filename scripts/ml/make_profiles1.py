@@ -4,9 +4,9 @@ import os
 import pickle
 
 from collections import defaultdict
-from profiles import *
+from ml.profiles import *
 from tqdm import tqdm
-from scripts.util import read_jsonl
+from util import read_jsonl
 
 
 def make_item_profile(item):
@@ -22,9 +22,6 @@ def make_item_profile(item):
     meta = item["meta"]
     for rubric in meta.get("rubrics", []):
         _set_feature_counter(item_profile, rubric, OT_RUBRIC)
-
-    for person in meta.get("persons", []):
-        _set_feature_counter(item_profile, person, OT_PERSON)
 
     for serial in meta.get("series", []):
         _set_feature_counter(item_profile, serial, OT_SERIES)
@@ -52,7 +49,6 @@ def main(
     users_path,
     profile_actions_path,
     target_actions_path,
-    output_directory,
     item_profiles_path,
     user_profiles_path
 ):
@@ -100,12 +96,8 @@ def main(
 
             user_profile.add(OT_GLOBAL, CT_BOOKING, rt, '', 1, ts)
 
-#            if library_id != None:
-#                user.add(OT_LIBRARY, CT_BOOKING, rt, library_id, 1, ts)
-
             user_profile.update_from(item_profile, OT_AUTHOR, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
             user_profile.update_from(item_profile, OT_RUBRIC, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
-            user_profile.update_from(item_profile, OT_PERSON, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
             user_profile.update_from(item_profile, OT_SERIES, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
 
 
@@ -115,11 +107,11 @@ def main(
 
     print("Dumping user profiles")
     user_profiles = { k: v for k, v in user_profiles.items() if k in target_user_ids }
-    with open(os.path.join(output_directory, user_profiles_path), 'wb') as user_profiles_pickle:
-        pickle.dump(user_profiles, user_profiles_pickle)
+    with open(user_profiles_path, 'wb') as user_profiles_pickle:
+        pickle.dump(dict(user_profiles), user_profiles_pickle)
 
     print("Dumping item profiles")
-    with open(os.path.join(output_directory, item_profiles_path), 'wb') as item_profiles_pickle:
+    with open(item_profiles_path, 'wb') as item_profiles_pickle:
         pickle.dump(dict(item_profiles), item_profiles_pickle)
 
 
@@ -130,8 +122,7 @@ if __name__ == "__main__":
     parser.add_argument('--users-path', type=str, default="users.jsonl")
     parser.add_argument('--profile-actions-path', type=str, required=True)
     parser.add_argument('--target-actions-path', type=str, required=True)
-    parser.add_argument('--output-directory', type=str, required=True)
-    parser.add_argument('--item-profiles-path', type=str, default="item_profiles.pkl")
-    parser.add_argument('--user-profiles-path', type=str, default="user_profiles.pkl")
+    parser.add_argument('--item-profiles-path', type=str, required=True)
+    parser.add_argument('--user-profiles-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
