@@ -1,61 +1,71 @@
 import argparse
-import datetime
 import json
 import os
 
 from tqdm import tqdm
 
+from util import read_jsonl
+
+
+def write_record(f, record):
+    f.write(json.dumps(record, ensure_ascii=False).strip() + "\n")
+
 
 def main(
-    actions_path,
     start_train_ts,
-    end_train_ts,
+    finish_train_ts,
     start_valid_ts,
-    end_valid_ts,
-    output_directory,
-    train_profile_actions_path,
-    train_target_actions_path,
-    valid_profile_actions_path,
-    valid_target_actions_path
+    finish_valid_ts,
+    input_directory,
+    actions_path,
+    train_stat_path,
+    train_target_path,
+    valid_stat_path,
+    valid_target_path,
+    test_stat_path
 ):
-    def _parse_ts(value):
-        return datetime.datetime.fromisoformat(value).timestamp()
-    start_train_ts = _parse_ts(start_train_ts)
-    end_train_ts = _parse_ts(end_train_ts)
-    start_valid_ts = _parse_ts(start_valid_ts)
-    end_valid_ts = _parse_ts(end_valid_ts)
+    actions = read_jsonl(os.path.join(input_directory, actions_path))
+    train_stat = open(os.path.join(input_directory, train_stat_path), "w")
+    train_target = open(os.path.join(input_directory, train_target_path), "w")
+    valid_stat = open(os.path.join(input_directory, valid_stat_path), "w")
+    valid_target = open(os.path.join(input_directory, valid_target_path), "w")
+    test_stat = open(os.path.join(input_directory, test_stat_path), "w")
 
-    train_profile_actions_f = open(os.path.join(output_directory, train_profile_actions_path), 'w')
-    train_target_actions_f = open(os.path.join(output_directory, train_target_actions_path), 'w')
-    valid_profile_actions_f = open(os.path.join(output_directory, valid_profile_actions_path), 'w')
-    valid_target_actions_f = open(os.path.join(output_directory, valid_target_actions_path), 'w')
+    for action in tqdm(actions):
+        ts = action["ts"]
+        if action["has_bad_item"] or action["has_bad_user"]:
+            continue
+        write_record(test_stat, action)
+        if ts < start_train_ts:
+            write_record(train_stat, action)
+            write_record(valid_stat, action)
+        elif ts < finish_train_ts:
+            write_record(train_target, action)
+            write_record(valid_stat, action)
+        elif ts < start_valid_ts:
+            write_record(valid_stat, action)
+        elif ts < finish_valid_ts:
+            write_record(valid_target, action)
 
-    with open(actions_path, 'r') as actions_f:
-        for row in tqdm(actions_f):
-            ts = json.loads(row.rstrip())['ts']
-            if ts < start_train_ts:
-                train_profile_actions_f.write(row)
-                valid_profile_actions_f.write(row)
-            elif ts < end_train_ts:
-                train_target_actions_f.write(row)
-                valid_profile_actions_f.write(row)
-            elif ts < start_valid_ts:
-                valid_profile_actions_f.write(row)
-            elif ts < end_valid_ts:
-                valid_target_actions_f.write(row)
+    train_stat.close()
+    train_target.close()
+    valid_stat.close()
+    valid_target.close()
+    test_stat.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--actions-path', type=str, required=True)
-    parser.add_argument('--start-train-ts', type=str, required=True, help='1970-01-01')
-    parser.add_argument('--end-train-ts', type=str, required=True)
-    parser.add_argument('--start-valid-ts', type=str, required=True)
-    parser.add_argument('--end-valid-ts', type=str, required=True)
-    parser.add_argument('--output-directory', type=str, required=True)
-    parser.add_argument('--train-profile-actions-path', type=str, default="train_profile_actions.jsonl")
-    parser.add_argument('--train-target-actions-path', type=str, default="train_target_actions.jsonl")
-    parser.add_argument('--valid-profile-actions-path', type=str, default="valid_profile_actions.jsonl")
-    parser.add_argument('--valid-target-actions-path', type=str, default="valid_target_actions.jsonl")
+    parser.add_argument('--start-train-ts', type=int, required=True)
+    parser.add_argument('--finish-train-ts', type=int, required=True)
+    parser.add_argument('--train-stat-path', type=str, required=True)
+    parser.add_argument('--train-target-path', type=str, required=True)
+    parser.add_argument('--start-valid-ts', type=int, required=True)
+    parser.add_argument('--finish-valid-ts', type=int, required=True)
+    parser.add_argument('--valid-stat-path', type=str, required=True)
+    parser.add_argument('--valid-target-path', type=str, required=True)
+    parser.add_argument('--test-stat-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

@@ -58,12 +58,14 @@ def write_jsonl(path, items):
 
 
 def read_jsonl(path):
+    assert os.path.exists(path)
     with open(path, "r", encoding="utf-8") as r:
         for line in r:
             yield json.loads(line)
 
 
 def read_json(path, save_fields=None):
+    assert os.path.exists(path)
     with open(path) as r:
         records = json.load(r)
         if save_fields:

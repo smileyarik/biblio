@@ -1,190 +1,122 @@
+import argparse
 import datetime
-import sys
-import csv
-import json
-from ml.profiles import *
-from collections import defaultdict
+import os
 import pickle
-import time
-import datetime
+from collections import defaultdict
 
-def getts(d):
-    try:
-        return int(datetime.datetime.strptime(d, "%d.%m.%Y").timestamp())
-    except:
-        #1991-11-26 14:00:00
-        try:
-            return int(datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S").timestamp())
-        except:
-            print("Bad date -%s-" % d)
-            return int(datetime.datetime.strptime('12.12.2010', "%d.%m.%Y").timestamp())
+from tqdm import tqdm
+
+from ml.profiles import OT, CT, RT, Counters
+from util import read_jsonl
 
 
-def make_counters():
-    return Counters()
+def set_feature_counter(item, feature, object_type):
+    if feature_id := feature['id']:
+        item.set(object_type, CT.HAS, RT.SUM, feature_id, 1, 0)
 
-if __name__ == '__main__':
-    item_counters = defaultdict(make_counters)
-    user_counters = defaultdict(make_counters)
 
-    bookpoint_to_lib = {}
-    print("Read bookpoint data")
-    # id;cbs;name;adress;eisk
-    with open(sys.argv[1]) as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            #print(row)
-            if row[4] != '' and row[0] != '':
-                bookpoint_to_lib[int(row[0])] = int(row[4])
+def make_item_profile(item):
+    item_profile = Counters()
 
-    author_to_id = {}
-    with open('../data/authors.csv') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            author_to_id[row[1]] = int(row[0])
-    rubric_to_id = {}
-    with open('../data/rubrics.csv') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            rubric_to_id[row[1]] = int(row[0])
-    series_to_id = {}
-    with open('../data/series.csv') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            series_to_id[row[1]] = int(row[0])
-    person_to_id = {}
-    with open('../data/persons.csv') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            person_to_id[row[1]] = int(row[0])
+    if author := item["author"]:
+        set_feature_counter(item_profile, author, OT.AUTHOR)
 
+    meta = item["meta"]
+    for rubric in meta.get("rubrics", []):
+        set_feature_counter(item_profile, rubric, OT.RUBRIC)
+    for serial in meta.get("series", []):
+        set_feature_counter(item_profile, serial, OT.SERIES)
+
+    return item_profile
+
+
+def make_user_profile(user, current_ts):
+    user_profile = Counters()
+
+    if birth_date := user["meta"].get("birth_date"):
+        birth_date_ts = datetime.datetime.fromisoformat(birth_date).timestamp()
+        user_profile.set(OT.AGE, CT.VALUE, RT.SUM, '', current_ts - birth_date_ts, 0)
+
+    return user_profile
+
+
+def main(
+    input_directory,
+    items_path,
+    users_path,
+    profile_actions_path,
+    target_actions_path,
+    item_profiles_path,
+    user_profiles_path
+):
+    item_profiles = defaultdict(lambda: Counters())
+    user_profiles = defaultdict(lambda: Counters())
+
+    target_user_ids = set()
+    target_min_ts = int(1e10)
+
+    print("Read target users")
+    target_action_gen = read_jsonl(os.path.join(input_directory, target_actions_path))
+    for action in tqdm(target_action_gen):
+        target_user_ids.add(action["user_id"])
+        target_min_ts = min(target_min_ts, action["ts"])
 
     print("Read books data")
-    # recId;aut;title;place;publ;yea;lan;rubrics;person;serial;material;biblevel;ager
-    with open('../data/cat.csv') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            item_id = int(row[0])
-            item = item_counters[item_id]
-
-            if row[1] != '':
-                if row[1] in author_to_id:
-                    author_id = author_to_id[row[1]]
-                    if author_id != None and author_id != 0:
-                        item.set(OT_AUTHOR, CT_HAS, RT_SUM, author_id, 1, 0)
-            if row[7] != '':
-                for f in row[7].strip().split(' : '):
-                    if f in rubric_to_id:
-                        rubric_id = rubric_to_id[f]
-                        item.set(OT_RUBRIC, CT_HAS, RT_SUM, rubric_id, 1, 0)
-            if row[8] != '':
-                for f in row[8].strip().split(' : '):
-                    if f in person_to_id:
-                        person_id = person_to_id[f]
-                        item.set(OT_PERSON, CT_HAS, RT_SUM, person_id, 1, 0)
-            if row[9] != '':
-                for f in row[9].strip().split(' : '):
-                    if f in series_to_id:
-                        series_id = series_to_id[f]
-                        item.set(OT_SERIES, CT_HAS, RT_SUM, series_id, 1, 0)
-
-    print("Read books.jsn")
-    with open(sys.argv[2]) as bookfile:
-        json_data = json.load(bookfile)
-
-        for book in json_data:
-            item_id = book['id']
-            item = item_counters[item_id]
-            #print(book['libraryAvailability'])
-            if 'libraryAvailability' in book:
-                for lib in book['libraryAvailability']:
-                    lib_id = lib['libraryId']
-                    count = lib['totalOutCount']
-                    item.set(OT_LIBRARY, CT_VALUE, RT_SUM, lib_id, count, 0)
+    item_gen = read_jsonl(os.path.join(input_directory, items_path))
+    for item in tqdm(item_gen):
+        item_profiles[item["uniq_id"]] = make_item_profile(item)
 
     print("Read user data")
-    with open(sys.argv[3]) as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            #user_id,city
-            user_id = int(row[0])
-            bd = getts(row[1])
-
-            user = user_counters[user_id]
-            user.set(OT_AGE, CT_VALUE, RT_SUM, '', getts('07.10.2021')-bd, 0)
-
-    target_users = set()
-    print("Read target users")
-    with open(sys.argv[4]) as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
-        for row in reader:
-            target_users.add(int(row[5]))
-
+    user_gen = read_jsonl(os.path.join(input_directory, users_path))
+    for user in tqdm(user_gen):
+        user_profiles[user["id"]] = make_user_profile(user, target_min_ts)
 
     print("Parsing transactions")
-    # circulationID;catalogueRecordID;barcode;startDate;finishDate;readerID;bookpointID;state;;
-    # OT_ITEM = 0; OT_USER = 1; OT_AUTHOR = 2; OT_LIBRARY = 3; OT_RUBRIC = 4; OT_PERSON = 5; OT_SERIES = 6; OT_AGE = 7;
-    with open(sys.argv[5]) as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        next(reader, None)
+    profile_action_gen = read_jsonl(os.path.join(input_directory, profile_actions_path))
+    for action in tqdm(profile_action_gen):
+        user_id = action["user_id"]
+        item_id = action["item_uniq_id"]
+        ts = action["ts"]
+        user_profile = user_profiles[user_id]
+        item_profile = item_profiles[item_id]
 
-        count = 1
-        for row in reader:
-            if count % 100000 == 0:
-                print(count)
-            count += 1
+        for rt in [RT.SUM, RT.D7, RT.D30]:
+            item_profile.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
+            if user_id not in target_user_ids:
+                continue
 
-            user_id = int(row[5])
-            item_id = int(row[1])
-            ts = getts(row[3])
-            if int(row[6]) in bookpoint_to_lib:
-                library_id = bookpoint_to_lib[int(row[6])]
-            else:
-                library_id = None
+            user_profile.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
 
-            user = user_counters[user_id]
-            item = item_counters[item_id]
+            user_profile.update_from(item_profile, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.update_from(item_profile, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.update_from(item_profile, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
-            for rt in [RT_SUM, RT_7D, RT_30D]:
-                item.add(OT_GLOBAL, CT_BOOKING, rt, '', 1, ts)
-                if library_id != None:
-                    item.add(OT_LIBRARY, CT_BOOKING, rt, library_id, 1, ts)
-                # TODO calc age stat for book
-                # item.update_from(user, OT_AGE, CT_HAS, RT_SUM, CT_REVIEW_BY, rt, ts)
 
-                if user_id in target_users:
-                    user.add(OT_GLOBAL, CT_BOOKING, rt, '', 1, ts)
+    print('============ ITEM 3340 =============')
+    item_profiles[3340].print_debug()
 
-                    if library_id != None:
-                        user.add(OT_LIBRARY, CT_BOOKING, rt, library_id, 1, ts)
-
-                    user.update_from(item, OT_AUTHOR, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
-                    user.update_from(item, OT_RUBRIC, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
-                    user.update_from(item, OT_PERSON, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
-                    user.update_from(item, OT_SERIES, CT_HAS, RT_SUM, CT_BOOKING_BY, rt, ts)
-
-    print('==========================')
-    item_counters[456976].print_debug()
+    print('============ USER 10160192 ==============')
+    user_profiles[10160192].print_debug()
 
     print("Dumping user profiles")
-    user_counters_out = defaultdict(make_counters)
-    for user_id,user in user_counters.items():
-        if user_id in target_users:
-            user_counters_out[user_id] = user
-
-    with open(sys.argv[6], 'wb') as user_pickle:
-        pickle.dump(user_counters_out, user_pickle)
+    user_profiles = {k: v for k, v in user_profiles.items() if k in target_user_ids}
+    with open(os.path.join(input_directory, user_profiles_path), 'wb') as user_profiles_pickle:
+        pickle.dump(dict(user_profiles), user_profiles_pickle)
 
     print("Dumping item profiles")
-    with open(sys.argv[7], 'wb') as item_pickle:
-        pickle.dump(item_counters, item_pickle)
+    item_profiles = {k: v for k, v in item_profiles.items()}
+    with open(os.path.join(input_directory, item_profiles_path), 'wb') as item_profiles_pickle:
+        pickle.dump(dict(item_profiles), item_profiles_pickle)
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input-directory', type=str, required=True)
+    parser.add_argument('--items-path', type=str, default="items.jsonl")
+    parser.add_argument('--users-path', type=str, default="users.jsonl")
+    parser.add_argument('--profile-actions-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--item-profiles-path', type=str, required=True)
+    parser.add_argument('--user-profiles-path', type=str, required=True)
+    args = parser.parse_args()
+    main(**vars(args))
