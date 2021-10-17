@@ -1,6 +1,6 @@
 !/bin/bash
 
-DIR="data_new"
+DIR="$1"
 FULL_TRAIN=1
 
 if [ FULL_TRAIN == 1 ]; then
