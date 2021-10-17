@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DIR="data_new_2"
-FULL_TRAIN=0
+DIR="$1"
+FULL_TRAIN=1
 
 if [ FULL_TRAIN == 1 ]; then
     TRAIN_PAGERANK_TS=1613520000
