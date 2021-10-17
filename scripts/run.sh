@@ -1,6 +1,16 @@
-!/bin/bash
+#!/bin/bash
 
 DIR="data_new"
+FULL_TRAIN=1
+
+if [ FULL_TRAIN == 1 ]; then
+    TRAIN_PAGERANK_TS=1613520000
+    VALID_PAGERANK_TS=1614124800
+else
+    TRAIN_PAGERANK_TS=1569542400
+    VALID_PAGERANK_TS=1569888000
+fi
+
 
 mkdir -p $DIR
 
