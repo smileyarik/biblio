@@ -7,4 +7,4 @@ bash +x refine_data.sh ../../data ../../workdir
 ### Train model
 ```
 bash +x run.sh ../../workdir
-`
+```

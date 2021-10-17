@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 
 DIR="$1"
 FULL_TRAIN=1
