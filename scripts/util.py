@@ -10,6 +10,10 @@ BIBLIO_USERS_ID_OFFSET = 10000000
 BIBLIO_ACTIONS_ID_OFFSET = 100000000
 
 
+def is_site_user(id):
+    return int(id) < BIBLIO_USERS_ID_OFFSET
+
+
 def read_csv(
     file_name,
     delimiter=";",

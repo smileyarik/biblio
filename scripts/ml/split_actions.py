@@ -2,9 +2,13 @@ import argparse
 import json
 import os
 
+from collections import defaultdict
 from tqdm import tqdm
 
-from util import read_jsonl
+from util import read_jsonl, is_site_user
+
+
+SITE_USER_VALID_ACTION_COUNT = 5
 
 
 def write_record(f, record):
@@ -31,8 +35,14 @@ def main(
     valid_target = open(os.path.join(input_directory, valid_target_path), "w")
     test_stat = open(os.path.join(input_directory, test_stat_path), "w")
 
+    site_user_actions = defaultdict(list)
+
     for action in tqdm(actions):
         ts = action["ts"]
+        user_id = action["user_id"]
+        if is_site_user(user_id):
+            site_user_actions[user_id].append(action)
+            continue
         if action["has_bad_item"] or action["has_bad_user"]:
             continue
         write_record(test_stat, action)
@@ -45,6 +55,13 @@ def main(
         elif ts < start_valid_ts:
             write_record(valid_stat, action)
         elif ts < finish_valid_ts:
+            write_record(valid_target, action)
+
+    for _, actions in site_user_actions.items():
+        actions.sort(key=lambda a: a["ts"], reverse=True)
+        for action in actions[SITE_USER_VALID_ACTION_COUNT:]:
+            write_record(valid_stat, action)
+        for action in actions[:SITE_USER_VALID_ACTION_COUNT]:
             write_record(valid_target, action)
 
     train_stat.close()
