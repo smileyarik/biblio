@@ -20,7 +20,8 @@ def main(
     start_ts,
     profile_actions_path,
     features_output_path,
-    cd_output_path
+    cd_output_path,
+    rw_path
 ):
     print("Read user profiles")
     with open(os.path.join(input_directory, user_profiles_path), "rb") as r:
@@ -45,6 +46,12 @@ def main(
     for action in tqdm(stat_actions):
         filter_items[action["user_id"]].add(action["item_uniq_id"])
 
+    print("Random walk load")
+    rw_records = read_jsonl(os.path.join(input_directory, rw_path))
+    rw_graph = defaultdict(lambda: defaultdict(float))
+    for record in rw_records:
+        rw_graph[record["user"]][record["item"]] = record["weight"]
+
     print("Calc candidates")
     book_top = []
     for item_id,item in items.items():
@@ -68,8 +75,19 @@ def main(
         user = users[user_id]
         top = book_top[:poptop]
         top_ids = {item_id for item_id, _ in top}
-        tail_top = book_top[poptop:]
 
+        rw_top = []
+        for item_id, value in rw_graph.get(user_id, {}).items():
+            rw_top.append((item_id, value))
+        rw_top.sort(key=lambda x: -x[1])
+        for item_id, rank in rw_top:
+            if len(top) >= items_per_group:
+                break
+            if item_id in top_ids or item_id in filter_items[user_id]:
+                continue
+            top.append((item_id, rank))
+
+        tail_top = book_top[poptop:]
         for item_id, rank in tail_top:
             if len(top) >= items_per_group:
                 break
@@ -90,6 +108,9 @@ def main(
             target = 1 if item_id in target_items[user_id] else 0
 
             f = []
+            f.append(rw_graph.get(user_id, {}).get(item_id, 0.0))
+            cd.add('random_walk')
+
             for rt in [RT.SUM, RT.D7, RT.D30]:
                 f.append(counter_cos(user, item, OT.AUTHOR, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
                 cd.add('author_cos_rt' + rt)
@@ -109,6 +130,7 @@ def main(
                 full_size = float(full_events.get(OT.GLOBAL, CT.BOOKING, rt, '', ts))
                 f.append(item_size / full_size)
                 cd.add('item_size_rt' + rt)
+
             cd.finish()
             features = '\t'.join([str(ff) for ff in f])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
@@ -134,5 +156,6 @@ if __name__ == "__main__":
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
+    parser.add_argument('--rw-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
