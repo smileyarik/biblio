@@ -17,6 +17,7 @@ def main(
     start_valid_ts,
     finish_valid_ts,
     input_directory,
+    output_directory,
     actions_path,
     train_stat_path,
     train_target_path,
@@ -25,11 +26,12 @@ def main(
     test_stat_path
 ):
     actions = read_jsonl(os.path.join(input_directory, actions_path))
-    train_stat = open(os.path.join(input_directory, train_stat_path), "w")
-    train_target = open(os.path.join(input_directory, train_target_path), "w")
-    valid_stat = open(os.path.join(input_directory, valid_stat_path), "w")
-    valid_target = open(os.path.join(input_directory, valid_target_path), "w")
-    test_stat = open(os.path.join(input_directory, test_stat_path), "w")
+
+    train_stat = open(os.path.join(output_directory, train_stat_path), "w")
+    train_target = open(os.path.join(output_directory, train_target_path), "w")
+    valid_stat = open(os.path.join(output_directory, valid_stat_path), "w")
+    valid_target = open(os.path.join(output_directory, valid_target_path), "w")
+    test_stat = open(os.path.join(output_directory, test_stat_path), "w")
 
     for action in tqdm(actions):
         ts = action["ts"]
@@ -57,6 +59,7 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-directory', type=str, required=True)
+    parser.add_argument('--output-directory', type=str, required=True)
     parser.add_argument('--actions-path', type=str, required=True)
     parser.add_argument('--start-train-ts', type=int, required=True)
     parser.add_argument('--finish-train-ts', type=int, required=True)
