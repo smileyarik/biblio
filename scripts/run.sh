@@ -19,8 +19,11 @@ else
     VALID_FINISH_TS=1570233600
 fi
 
-
-mkdir -p $DIR
+if [ ! -d "$DIR" ]
+then
+    echo "Directory $DIR DOES NOT exists."
+    exit 1
+fi
 
 python3 -m ml.split_actions \
     --input-directory $DIR \
