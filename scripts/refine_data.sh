@@ -18,4 +18,14 @@ echo "-----users-----"
 python3 -m prepare.refine_users --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/users.jsonl"
 
 echo "-----actions-----"
-python3 -m prepare.refine_actions --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/actions.jsonl" --refined-items-path "$OUTPUT_DIR/items.jsonl" --refined-users-path "$OUTPUT_DIR/users.jsonl"
+python3 -m prepare.refine_actions \
+    --input-directory $INPUT_DIR \
+    --output-path "$OUTPUT_DIR/actions.jsonl" \
+    --refined-items-path "$OUTPUT_DIR/items.jsonl" \
+    --refined-users-path "$OUTPUT_DIR/users.jsonl"
+
+echo "-----check-----"
+python3 -m prepare.check_consistency \
+    --items-path "$OUTPUT_DIR/items.jsonl" \
+    --actions-path "$OUTPUT_DIR/actions.jsonl" \
+    --users-path "$OUTPUT_DIR/users.jsonl"

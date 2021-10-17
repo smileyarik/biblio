@@ -6,17 +6,17 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from ml.profiles import OT, CT, RT, Counters
+from ml.profiles import OT, CT, RT, Profile
 from util import read_jsonl
 
 
-def set_feature_counter(item, feature, object_type):
+def set_feature_counter(profile, feature, object_type):
     if feature_id := feature['id']:
-        item.set(object_type, CT.HAS, RT.SUM, feature_id, 1, 0)
+        profile.counters.set(object_type, CT.HAS, RT.SUM, feature_id, 1, 0)
 
 
 def make_item_profile(item):
-    item_profile = Counters()
+    item_profile = Profile(item["uniq_id"], OT.ITEM)
 
     if author := item["author"]:
         set_feature_counter(item_profile, author, OT.AUTHOR)
@@ -31,11 +31,11 @@ def make_item_profile(item):
 
 
 def make_user_profile(user, current_ts):
-    user_profile = Counters()
+    user_profile = Profile(user["id"], OT.USER)
 
     if birth_date := user["meta"].get("birth_date"):
         birth_date_ts = datetime.datetime.fromisoformat(birth_date).timestamp()
-        user_profile.set(OT.AGE, CT.VALUE, RT.SUM, '', current_ts - birth_date_ts, 0)
+        user_profile.counters.set(OT.AGE, CT.VALUE, RT.SUM, '', current_ts - birth_date_ts, 0)
 
     return user_profile
 
@@ -47,10 +47,11 @@ def main(
     profile_actions_path,
     target_actions_path,
     item_profiles_path,
-    user_profiles_path
+    user_profiles_path,
+    make_for_all
 ):
-    item_profiles = defaultdict(lambda: Counters())
-    user_profiles = defaultdict(lambda: Counters())
+    item_profiles = dict()
+    user_profiles = dict()
 
     target_user_ids = set()
     target_min_ts = int(1e10)
@@ -77,36 +78,35 @@ def main(
         user_id = action["user_id"]
         item_id = action["item_uniq_id"]
         ts = action["ts"]
+        assert user_id in user_profiles
+        assert item_id in item_profiles
         user_profile = user_profiles[user_id]
         item_profile = item_profiles[item_id]
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
-            item_profile.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
-            if user_id not in target_user_ids:
+            item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
+            if user_id not in target_user_ids and not make_for_all:
                 continue
 
-            user_profile.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
+            user_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
-            user_profile.update_from(item_profile, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.update_from(item_profile, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.update_from(item_profile, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-
-
-    print('============ ITEM 3340 =============')
     item_profiles[3340].print_debug()
-
-    print('============ USER 10160192 ==============')
     user_profiles[10160192].print_debug()
 
     print("Dumping user profiles")
-    user_profiles = {k: v for k, v in user_profiles.items() if k in target_user_ids}
-    with open(os.path.join(input_directory, user_profiles_path), 'wb') as user_profiles_pickle:
-        pickle.dump(dict(user_profiles), user_profiles_pickle)
+    with open(os.path.join(input_directory, user_profiles_path), "w") as w:
+        for user_id, user_profile in user_profiles.items():
+            if user_id not in target_user_ids and not make_for_all:
+                continue
+            user_profile.dump(w)
 
     print("Dumping item profiles")
-    item_profiles = {k: v for k, v in item_profiles.items()}
-    with open(os.path.join(input_directory, item_profiles_path), 'wb') as item_profiles_pickle:
-        pickle.dump(dict(item_profiles), item_profiles_pickle)
+    with open(os.path.join(input_directory, item_profiles_path), "w") as w:
+        for _, item_profile in item_profiles.items():
+            item_profile.dump(w)
 
 
 if __name__ == "__main__":
@@ -118,5 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--target-actions-path', type=str, required=True)
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
+    parser.add_argument('--make-for-all', action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))
+

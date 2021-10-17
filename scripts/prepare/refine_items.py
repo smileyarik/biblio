@@ -77,6 +77,7 @@ def main(
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
+                "is_candidate": False,
                 "is_site": False,
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
@@ -103,7 +104,11 @@ def main(
     print("... {} biblio/items read".format(len(items)))
 
     print("Reading site/items...")
-    small_site_items = read_json(os.path.join(input_directory, site_small_items_path))
+
+    small_site_items = list(read_json(os.path.join(input_directory, site_small_items_path)))
+    for item in small_site_items:
+        item["is_candidate"] = True
+
     site_items = read_jsonl(os.path.join(input_directory, site_items_path))
     for r in tqdm(chain(small_site_items, site_items)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
@@ -114,6 +119,7 @@ def main(
             "id": int(r.pop("id")),
             "title": r.pop("title"),
             "meta": {
+                "is_candidate": ("is_candidate" in r),
                 "is_site": True,
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),

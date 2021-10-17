@@ -73,11 +73,11 @@ def main(
         users_counter[user_id] += 1
 
     print("Writing user actions count...")
-    for user_id, cnt in users_counter.most_common():
+    for user_id, cnt in tqdm(users_counter.most_common()):
         users[user_id]["actions_count"] = cnt
 
     print("Writing output...")
-    users = list(users.values())
+    users = [user for user in users.values() if user["actions_count"] > 0]
     users.sort(key=lambda x: x["id"])
     write_jsonl(output_path, users)
 

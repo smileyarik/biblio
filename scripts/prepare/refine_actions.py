@@ -29,7 +29,7 @@ def main(
     users = {user["id"]: user for user in users}
     print("... {} users read".format(len(users)))
 
-    print("Processing main actions...")
+    print("Processing biblio/actions...")
     actions_gen = read_csv_files(
         directory=input_directory,
         pattern=actions_pattern,
@@ -84,11 +84,14 @@ def main(
             assert action["item_id"] in items
             item = items[action["item_id"]]
             action["item_uniq_id"] = item["uniq_id"]
+            action["item_cf"] = item["meta"].get("collapse_field", None)
+            action["item_scf"] = item["meta"].get("smart_collapse_field", None)
             actions_count += 1
             w.write(json.dumps(action, ensure_ascii=False).strip() + "\n")
-        print("... {} actions overall".format(actions_count))
-        print("... {} bad actions by item".format(bad_actions_by_item_count))
-        print("... {} bad actions by user".format(bad_actions_by_user_count))
+
+    print("... {} actions overall".format(actions_count))
+    print("... {} bad actions by item".format(bad_actions_by_item_count))
+    print("... {} bad actions by user".format(bad_actions_by_user_count))
 
 
 if __name__ == "__main__":

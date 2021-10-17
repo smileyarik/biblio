@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from ml.profiles import OT, CT, RT, Counters
+from ml.profiles import OT, CT, RT, Counters, Profile
 from ml.features_lib import ColumnDescription, counter_cos
 from util import read_jsonl
 
@@ -24,24 +24,32 @@ def main(
     rw_path
 ):
     print("Read user profiles")
-    with open(os.path.join(input_directory, user_profiles_path), "rb") as r:
-        users = pickle.load(r)
+    users = dict()
+    with open(os.path.join(input_directory, user_profiles_path), "r") as r:
+        for line in r:
+            profile = Profile.loads(line)
+            users[profile.object_id] = profile
+    print("...{} users read".format(len(users)))
 
     print("Read item profiles")
-    with open(os.path.join(input_directory, item_profiles_path), "rb") as r:
-        items = pickle.load(r)
+    items = dict()
+    with open(os.path.join(input_directory, item_profiles_path), "r") as r:
+        for line in r:
+            profile = Profile.loads(line)
+            items[profile.object_id] = profile
+    print("...{} items read".format(len(items)))
 
+    print("Read target users")
     target_users = set()
     target_items = defaultdict(set)
-    print("Read target users")
     target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_actions):
         target_users.add(action["user_id"])
         target_items[action["user_id"]].add(action["item_uniq_id"])
     print("...{} target users".format(len(target_users)))
 
-    filter_items = defaultdict(set)
     print("Read already seen items")
+    filter_items = defaultdict(set)
     stat_actions = read_jsonl(os.path.join(input_directory, profile_actions_path))
     for action in tqdm(stat_actions):
         filter_items[action["user_id"]].add(action["item_uniq_id"])
@@ -54,8 +62,8 @@ def main(
 
     print("Calc candidates")
     book_top = []
-    for item_id,item in items.items():
-        item_size = float(item.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 0))
+    for item_id, item in items.items():
+        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 0))
         book_top.append((item_id, item_size))
     book_top = sorted(book_top, key=lambda x:-x[1])
 
@@ -63,7 +71,7 @@ def main(
     full_events = Counters()
     for item_id, item in items.items():
         for rt in [RT.SUM, RT.D7, RT.D30]:
-            full_events.update_from(item, OT.GLOBAL, CT.BOOKING, rt, CT.BOOKING, rt, start_ts)
+            full_events.update_from(item.counters, OT.GLOBAL, CT.BOOKING, rt, CT.BOOKING, rt, start_ts)
 
     print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
 
@@ -72,7 +80,7 @@ def main(
     cd = ColumnDescription()
     features_output = open(os.path.join(input_directory, features_output_path), "w")
     for user_id in tqdm(target_users):
-        user = users[user_id]
+        user = users[user_id].counters
         top = book_top[:poptop]
         top_ids = {item_id for item_id, _ in top}
 
@@ -104,7 +112,7 @@ def main(
             continue
 
         for item_id, _ in top:
-            item = items[item_id]
+            item = items[item_id].counters
             target = 1 if item_id in target_items[user_id] else 0
 
             f = []
