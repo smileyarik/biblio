@@ -40,6 +40,40 @@ def make_user_profile(user, current_ts):
     return user_profile
 
 
+def merge_items(item1, item2):
+    def get_list(item, key):
+        fields = item.get(key, list())
+        return fields if fields else list()
+
+    def uniq(l):
+        elems = {elem["id"]: elem for elem in l}
+        return list(elems.values())
+
+    if item1 is None:
+        return item2
+    if item2 is None:
+        return item1
+
+    assert item1["uniq_id"] == item2["uniq_id"]
+
+    rubrics = uniq(get_list(item1["meta"], "rubrics") + get_list(item2["meta"], "rubrics"))
+    series = uniq(get_list(item1["meta"], "series") + get_list(item2["meta"], "series"))
+    persons = uniq(get_list(item1["meta"], "persons") + get_list(item2["meta"], "persons"))
+
+    item = {
+        "author": item1["author"],
+        "title": item1["title"],
+        "uniq_id": item1["uniq_id"],
+        "ids": item1.get("ids", [item1.get("id")]) + item2.get("ids", [item2.get("id")]),
+        "meta": {
+            "rubrics": rubrics,
+            "series": series,
+            "persons": persons
+        }
+    }
+    return item
+
+
 def main(
     input_directory,
     items_path,
@@ -64,8 +98,13 @@ def main(
 
     print("Read books data")
     item_gen = read_jsonl(os.path.join(input_directory, items_path))
+    items = dict()
     for item in tqdm(item_gen):
-        item_profiles[item["uniq_id"]] = make_item_profile(item)
+        uniq_id = item["uniq_id"]
+        items[uniq_id] = merge_items(items.get(uniq_id, None), item)
+
+    for uniq_id, item in tqdm(items.items()):
+        item_profiles[uniq_id] = make_item_profile(item)
 
     print("Read user data")
     user_gen = read_jsonl(os.path.join(input_directory, users_path))
