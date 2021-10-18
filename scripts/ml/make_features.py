@@ -6,7 +6,7 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from ml.profiles import OT, CT, RT, Counters, Profile
-from ml.features_lib import ColumnDescription, counter_cos
+from ml.features_lib import ColumnDescription, counter_cos, FeaturesCalcer
 from util import read_jsonl
 
 
@@ -76,74 +76,48 @@ def main(
     print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
 
     print("Calc features")
+    calcer = FeaturesCalcer(rw_graph, full_events)
     ts = start_ts
-    cd = ColumnDescription()
     features_output = open(os.path.join(input_directory, features_output_path), "w")
-    for user_id in tqdm(target_users):
-        user = users[user_id].counters
-        top = book_top[:poptop]
-        top_ids = {item_id for item_id, _ in top}
 
-        rw_top = []
-        for item_id, value in rw_graph.get(user_id, {}).items():
-            rw_top.append((item_id, value))
+    bad_candidates_count = 0
+    for user_id in tqdm(target_users):
+        top = {item_id for item_id, _ in book_top[:poptop]}
+
+        rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
         rw_top.sort(key=lambda x: -x[1])
-        for item_id, rank in rw_top:
+        for item_id, _ in rw_top:
             if len(top) >= items_per_group:
                 break
-            if item_id in top_ids or item_id in filter_items[user_id]:
+            if item_id in top or item_id in filter_items[user_id]:
                 continue
-            top.append((item_id, rank))
+            top.add(item_id)
 
         tail_top = book_top[poptop:]
-        for item_id, rank in tail_top:
+        for item_id, _ in tail_top:
             if len(top) >= items_per_group:
                 break
-            if item_id in top_ids or item_id in filter_items[user_id]:
+            if item_id in top or item_id in filter_items[user_id]:
                 continue
-            top.append((item_id, rank))
+            top.add(item_id)
 
-        user_size = float(user.get(OT.GLOBAL, CT.BOOKING, RT.SUM, '', 0))
-        found_target = 0
-        for item_id, _ in top:
-            if item_id in target_items[user_id]:
-                found_target += 1
-        if len(target_items[user_id]) > 0 and found_target == 0:
+        targets_found = len(top.intersection(target_items[user_id]))
+        if targets_found == 0:
+            bad_candidates_count += 1
             continue
 
-        for item_id, _ in top:
-            item = items[item_id].counters
+        user = users[user_id]
+        top = list(sorted(top))
+        for item_id in top:
+            item = items[item_id]
             target = 1 if item_id in target_items[user_id] else 0
-
-            f = []
-            f.append(rw_graph.get(user_id, {}).get(item_id, 0.0))
-            cd.add('random_walk')
-
-            for rt in [RT.SUM, RT.D7, RT.D30]:
-                f.append(counter_cos(user, item, OT.AUTHOR, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
-                cd.add('author_cos_rt' + rt)
-                f.append(counter_cos(user, item, OT.LIBRARY, CT.BOOKING, CT.BOOKING, rt, RT.SUM, ts))
-                cd.add('library_cos_rt' + rt)
-                f.append(counter_cos(user, item, OT.RUBRIC, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
-                cd.add('rubric_cos_rt' + rt)
-                f.append(counter_cos(user, item, OT.SERIES, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
-                cd.add('series_cos_rt' + rt)
-
-            for rt in [RT.SUM, RT.D7, RT.D30]:
-                f.append(float(user.get(OT.GLOBAL, CT.BOOKING, rt, '', ts)))
-                cd.add('user_size_rt' +  rt)
-
-            for rt in [RT.SUM, RT.D7, RT.D30]:
-                item_size = float(item.get(OT.GLOBAL, CT.BOOKING, rt, '', ts))
-                full_size = float(full_events.get(OT.GLOBAL, CT.BOOKING, rt, '', ts))
-                f.append(item_size / full_size)
-                cd.add('item_size_rt' + rt)
-
-            cd.finish()
-            features = '\t'.join([str(ff) for ff in f])
+            features = calcer(user, item, ts)
+            features = '\t'.join([str(ff) for ff in features])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
-
     features_output.close()
+    print("Users with bad candidates: {}".format(bad_candidates_count))
+
+    cd = calcer.get_cd()
     with open(os.path.join(input_directory, cd_output_path), "w") as cd_out:
         cd_out.write('0\tGroupId\tuser_id\n')
         cd_out.write('1\tAuxiliary\titem_id\n')
@@ -159,8 +133,8 @@ if __name__ == "__main__":
     parser.add_argument('--user-profiles-path', type=str, required=True)
     parser.add_argument('--profile-actions-path', type=str, required=True)
     parser.add_argument('--target-actions-path', type=str, required=True)
-    parser.add_argument('--poptop', type=int, default=100)
-    parser.add_argument('--items-per-group', type=int, default=200)
+    parser.add_argument('--poptop', type=int, default=200)
+    parser.add_argument('--items-per-group', type=int, default=400)
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
