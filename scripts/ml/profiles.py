@@ -68,28 +68,39 @@ class Counter:
         self.value = value
         self.ts = ts
 
-    def _calc_decay(self, reducer_type, ts_delta):
+    @staticmethod
+    def _calc_decay(reducer_type, ts_delta):
         halflife = 0
         if reducer_type == RT.D7:
             halflife = 7 * ONE_DAY_SECONDS
-        elif reducer_type ==  RT.D30:
+        elif reducer_type == RT.D30:
             halflife = 30 * ONE_DAY_SECONDS
+        else:
+            raise 'unsupported reduce'
         return exp(-LN_2 * ts_delta / halflife)
+
+    @staticmethod
+    def _reduce_sorted(reducer_type, x, x_ts, y, y_ts):
+        assert x_ts <= y_ts
+        return x * Counter._calc_decay(reducer_type, float(y_ts - x_ts)) + y
+
+    @staticmethod
+    def _reduce(reducer_type, x, x_ts, y, y_ts):
+        return Counter._reduce_sorted(reducer_type, x, x_ts, y, y_ts) if x_ts < y_ts else Counter._reduce_sorted(reducer_type, y, y_ts, x, x_ts)
 
     def add(self, delta, ts, reducer_type):
         if reducer_type == RT.SUM or self.ts == 0:
             self.value += delta
             self.ts = ts
             return
-        decay = self._calc_decay(reducer_type, max(float(ts - self.ts), 0.0))
-        self.value = self.value * decay + delta
-        self.ts = ts
+        self.value = Counter._reduce(reducer_type, self.value, self.ts, delta, ts)
+        self.ts = max(self.ts, ts)
 
     def get(self, ts, reducer_type):
         if reducer_type == RT.SUM or self.ts == 0:
             return self.value
-        decay = self._calc_decay(reducer_type, max(float(ts - self.ts), 0.0))
-        return self.value * decay
+        assert self.ts <= ts
+        return Counter._reduce(reducer_type, self.value, self.ts, 0.0, ts)
 
     @property
     def __dict__(self):
