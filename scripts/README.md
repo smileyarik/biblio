@@ -8,3 +8,8 @@ bash +x refine_data.sh ../../data ../../workdir
 ```
 bash +x run.sh ../../workdir
 ```
+
+### Run tests
+```
+python -m unittest tests/test_profiles.py
+```

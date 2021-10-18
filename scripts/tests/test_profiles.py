@@ -30,3 +30,9 @@ class TestProfiles(unittest.TestCase):
         counters.add(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', delta=1000, ts=1+30*ONE_DAY_SECONDS)
         counters.add(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', delta=2000, ts=1)
         self.assertAlmostEqual(counters.get(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', ts=1+30*ONE_DAY_SECONDS), 2000, places=5)
+
+    def test_counter_set(self):
+        counters = Counters()
+        counters.add(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', delta=2000, ts=1)
+        counters.set(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', value=1000, ts=1)
+        self.assertAlmostEqual(counters.get(OT.GLOBAL, CT.VALUE, RT.D30, object_id='', ts=1), 1000)
