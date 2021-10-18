@@ -81,14 +81,14 @@ class Counter:
             self.value += delta
             self.ts = ts
             return
-        decay = self._calc_decay(reducer_type, float(ts - self.ts))
+        decay = self._calc_decay(reducer_type, max(float(ts - self.ts), 0.0))
         self.value = self.value * decay + delta
         self.ts = ts
 
     def get(self, ts, reducer_type):
         if reducer_type == RT.SUM or self.ts == 0:
             return self.value
-        decay = self._calc_decay(reducer_type, float(ts - self.ts))
+        decay = self._calc_decay(reducer_type, max(float(ts - self.ts), 0.0))
         return self.value * decay
 
     @property

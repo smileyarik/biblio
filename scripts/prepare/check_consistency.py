@@ -33,9 +33,12 @@ def main(items_path, users_path, actions_path):
     assert len(smart_collapse_fields) > 0
 
     actions_count = 0
+    ts = 0
     for action in tqdm(read_jsonl(actions_path)):
         assert action["user_id"] in users or action["has_bad_user"]
         assert action["item_id"] in items or action["has_bad_item"]
+        assert action["ts"] >= ts
+        ts = action["ts"]
         actions_count += 1
     assert actions_count >= 10000
 
