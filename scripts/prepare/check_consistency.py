@@ -14,21 +14,24 @@ def main(items_path, users_path, actions_path):
     items = {item["id"]: item for item in read_jsonl(items_path)}
     assert len(items) > 100
 
-    uniq_ids = set()
-    collapse_fields = set()
+    multiple_rubrics_count = 0
+    multiple_series_count = 0
     smart_collapse_fields = set()
     for _, item in tqdm(items.items()):
-        assert item["uniq_id"] is not None
         assert "meta" in item
-        uniq_ids.add(item["uniq_id"])
-        if cf := item["meta"].get("collapse_field", None):
-            collapse_fields.add(cf)
-        if scf := item["meta"].get("smart_collapse_field", None):
-            smart_collapse_fields.add(scf)
-    print("{} uniq ids".format(len(uniq_ids)))
-    assert len(uniq_ids) > 0
-    print("{} collapse fields".format(len(collapse_fields)))
-    assert len(collapse_fields) > 0
+        meta = item["meta"]
+        assert item.get("scf_id")
+        scf = item["scf_id"]
+        smart_collapse_fields.add(scf)
+        if len(meta.get("rubrics", [])) > 1:
+            multiple_rubrics_count += 1
+        if len(meta.get("series", [])) > 1:
+            multiple_series_count += 1
+
+    print("{} items with multiple rubrics".format(multiple_rubrics_count))
+    assert multiple_rubrics_count > 0
+    print("{} items with multiple series".format(multiple_series_count))
+    assert multiple_series_count > 0
     print("{} smart collapse fields".format(len(smart_collapse_fields)))
     assert len(smart_collapse_fields) > 0
 

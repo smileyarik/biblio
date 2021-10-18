@@ -7,7 +7,7 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from ml.profiles import OT, CT, RT, Profile
-from util import read_jsonl
+from util import read_jsonl, merge_meta
 
 
 def set_feature_counter(profile, feature, object_type):
@@ -16,7 +16,7 @@ def set_feature_counter(profile, feature, object_type):
 
 
 def make_item_profile(item):
-    item_profile = Profile(item["uniq_id"], OT.ITEM)
+    item_profile = Profile(item["scf_id"], OT.ITEM)
 
     if author := item["author"]:
         set_feature_counter(item_profile, author, OT.AUTHOR)
@@ -41,34 +41,22 @@ def make_user_profile(user, current_ts):
 
 
 def merge_items(item1, item2):
-    def get_list(item, key):
-        fields = item.get(key, list())
-        return fields if fields else list()
-
-    def uniq(l):
-        elems = {elem["id"]: elem for elem in l}
-        return list(elems.values())
-
     if item1 is None:
         return item2
     if item2 is None:
         return item1
 
-    assert item1["uniq_id"] == item2["uniq_id"]
-
-    rubrics = uniq(get_list(item1["meta"], "rubrics") + get_list(item2["meta"], "rubrics"))
-    series = uniq(get_list(item1["meta"], "series") + get_list(item2["meta"], "series"))
-    persons = uniq(get_list(item1["meta"], "persons") + get_list(item2["meta"], "persons"))
-
+    meta1 = item1["meta"]
+    meta2 = item2["meta"]
+    assert item1["scf_id"] == item2["scf_id"]
+    merged_meta = merge_meta(meta1, meta2, ("rubrics", "series"))
     item = {
         "author": item1["author"],
         "title": item1["title"],
-        "uniq_id": item1["uniq_id"],
-        "ids": item1.get("ids", [item1.get("id")]) + item2.get("ids", [item2.get("id")]),
+        "scf_id": item1["scf_id"],
         "meta": {
-            "rubrics": rubrics,
-            "series": series,
-            "persons": persons
+            "rubrics": merged_meta["rubrics"],
+            "series": merged_meta["series"]
         }
     }
     return item
@@ -100,7 +88,7 @@ def main(
     item_gen = read_jsonl(os.path.join(input_directory, items_path))
     items = dict()
     for item in tqdm(item_gen):
-        uniq_id = item["uniq_id"]
+        uniq_id = item["scf_id"]
         items[uniq_id] = merge_items(items.get(uniq_id, None), item)
 
     for uniq_id, item in tqdm(items.items()):
@@ -115,7 +103,7 @@ def main(
     profile_action_gen = read_jsonl(os.path.join(input_directory, profile_actions_path))
     for action in tqdm(profile_action_gen):
         user_id = action["user_id"]
-        item_id = action["item_uniq_id"]
+        item_id = action["item_scf"]
         ts = action["ts"]
         assert user_id in user_profiles
         assert item_id in item_profiles
@@ -132,7 +120,7 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
-    item_profiles[3340].print_debug()
+    item_profiles[1337].print_debug()
     user_profiles[10160192].print_debug()
 
     print("Dumping user profiles")

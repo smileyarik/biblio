@@ -1,9 +1,9 @@
 #!/bin/bash
 
 DIR="$1"
-FULL_TRAIN=0
+FULL_TRAIN=1
 
-if [ FULL_TRAIN == 1 ]; then
+if [ $FULL_TRAIN == 1 ]; then
     TRAIN_PAGERANK_TS=1613520000
     TRAIN_START_TS=1629158400
     TRAIN_FINISH_TS=1629763200
@@ -61,7 +61,8 @@ python3 -m ml.random_walk \
     --profile-actions-path train_stat.jsonl \
     --target-actions-path train_target.jsonl \
     --output-path train_random_walk.jsonl \
-    --start-ts $TRAIN_PAGERANK_TS
+    --start-ts $TRAIN_PAGERANK_TS \
+    --probability 0.1
 
 echo "==== Random walk (valid)"
 python3 -m ml.random_walk \
@@ -69,7 +70,8 @@ python3 -m ml.random_walk \
     --profile-actions-path valid_stat.jsonl \
     --target-actions-path valid_target.jsonl \
     --output-path valid_random_walk.jsonl \
-    --start-ts $VALID_PAGERANK_TS
+    --start-ts $VALID_PAGERANK_TS \
+    --probability 0.1
 
 echo "==== Make features (train)"
 python3 -m ml.make_features \

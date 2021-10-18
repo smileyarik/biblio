@@ -88,3 +88,22 @@ def datetime_to_ts(dt):
 
 def date_to_ts(dt):
     return int(datetime.datetime.strptime(dt, '%d.%m.%Y').timestamp())
+
+
+def get_features_list(item, key):
+    values = item.get(key, list())
+    return values if values else list()
+
+
+def get_uniq_features(features):
+    elems = {elem["id"]: elem for elem in features}
+    return list(elems.values())
+
+
+def merge_meta(meta1, meta2, keys):
+    result = dict()
+    for key in keys:
+        f1 = get_features_list(meta1, key)
+        f2 = get_features_list(meta2, key)
+        result[key] = get_uniq_features(f1 + f2)
+    return result

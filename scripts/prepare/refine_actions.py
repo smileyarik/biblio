@@ -21,9 +21,7 @@ def main(
     assert os.path.exists(refined_items_path)
     items = [{
         "id": i["id"],
-        "uniq_id": i["uniq_id"],
-        "collapse_field": i["meta"].get("collapse_field", None),
-        "smart_collapse_field": i["meta"].get("smart_collapse_field", None)
+        "scf_id": i["scf_id"]
     } for i in read_jsonl(refined_items_path)]
     items = {item["id"]: item for item in items}
     print("... {} items read".format(len(items)))
@@ -43,7 +41,6 @@ def main(
 
     bad_actions_by_item_count = 0
     bad_actions_by_user_count = 0
-    max_action_id = 0
     actions = []
     for a in tqdm(actions_gen):
         user_id = int(a["readerID"]) + BIBLIO_USERS_ID_OFFSET
@@ -55,7 +52,8 @@ def main(
             "duration": date_to_ts(a["finishDate"]) - date_to_ts(a["startDate"]),
             "type": "take",
             "has_bad_item": False,
-            "has_bad_user": False
+            "has_bad_user": False,
+            "item_scf": None
         }
         user = users[user_id]
         if user["actions_count"] >= 500:
@@ -63,17 +61,10 @@ def main(
             action["has_bad_user"] = True
 
         if item := items.get(action["item_id"], None):
-            action["item_uniq_id"] = item["uniq_id"]
-            action["item_cf"] = item["collapse_field"]
-            action["item_scf"] = item["smart_collapse_field"]
+            action["item_scf"] = item["scf_id"]
         else:
             bad_actions_by_item_count += 1
             action["has_bad_item"] = True
-            action["item_uniq_id"] = None
-            action["item_cf"] = None
-            action["item_scf"] = None
-
-        max_action_id = max(max_action_id, action["id"])
         actions.append(action)
     print("... {} actions processed".format(len(actions)))
 
@@ -87,13 +78,14 @@ def main(
             "duration": -1,
             "type": a["event"],
             "has_bad_item": False,
-            "has_bad_user": False
+            "has_bad_user": False,
+            "item_scf": None
         }
-        assert action["item_id"] in items
-        item = items[action["item_id"]]
-        action["item_uniq_id"] = item["uniq_id"]
-        action["item_cf"] = item["collapse_field"]
-        action["item_scf"] = item["smart_collapse_field"]
+        if item := items.get(action["item_id"], None):
+            action["item_scf"] = item["scf_id"]
+        else:
+            bad_actions_by_item_count += 1
+            action["has_bad_item"] = True
         actions.append(action)
 
     actions.sort(key=lambda x: x["ts"])
