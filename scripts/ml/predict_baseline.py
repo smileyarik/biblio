@@ -21,16 +21,16 @@ def calc_popular_baseline(
     items,
     filter_items,
 ):
-    book_top = []
+    top = []
     for item_id, item in items.items():
-        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 0))
-        book_top.append((item_id, item_size))
-    book_top = sorted(book_top, key=lambda x: x[1], reverse=True)
+        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 1633028400)) # 1 октября 2021 г., fix it
+        top.append((item_id, item_size))
+    top = sorted(top, key=lambda x: x[1], reverse=True)
 
     predictions = []
     for user_id in tqdm(target_users):
-        filtered_top = filter(book_top, lambda x: x[0] not in filter_items)
-        for item_id in itertools.islice(filtered_top, PREDICTION_LIMIT):
+        filtered_top = filter(lambda x: x[0] not in filter_items[user_id], top)
+        for item_id, _ in itertools.islice(filtered_top, PREDICTION_LIMIT):
             predictions.append((user_id, item_id))
     return predictions
 
@@ -40,14 +40,15 @@ def calc_rw_baseline(
     rw_path,
     filter_items,
 ):
-    rw_graph = defaultdict(lambda: defaultdict(float))
+    rw_graph = defaultdict(list)
     for record in read_jsonl(rw_path):
-        rw_graph[record["user"]][record["item"]] = record["weight"]
+        rw_graph[record["user"]].append((record["item"], record["weight"]))
 
     predictions = []
     for user_id in tqdm(target_users):
-        filtered_top = filter(book_top, lambda x: x[0] not in filter_items)
-        for item_id in itertools.islice(filtered_top, PREDICTION_LIMIT):
+        top = sorted(rw_graph[user_id], key=lambda x: x[1], reverse=True)
+        filtered_top = filter(lambda x: x[0] not in filter_items[user_id], top)
+        for item_id, _ in itertools.islice(filtered_top, PREDICTION_LIMIT):
             predictions.append((user_id, item_id))
     return predictions
 
@@ -61,8 +62,8 @@ def calc_random_baseline(
 
     predictions = []
     for user_id in tqdm(target_users):
-        random_top = random.sample(items.keys())
-        filtered_top = filter(random_top, lambda x: x[0] not in filter_items)
+        top = random.sample(items.keys(), k=PREDICTION_LIMIT+len(filter_items[user_id]))
+        filtered_top = filter(lambda x: x not in filter_items[user_id], top)
         for item_id in itertools.islice(filtered_top, PREDICTION_LIMIT):
             predictions.append((user_id, item_id))
     return predictions
@@ -82,7 +83,7 @@ def main(
     print("Read item profiles")
     items = dict()
     with open(os.path.join(input_directory, item_profiles_path), "r") as r:
-        for line in r:
+        for line in tqdm(r):
             profile = Profile.loads(line)
             items[profile.object_id] = profile
     print("...{} items read".format(len(items)))
@@ -115,7 +116,7 @@ def main(
 
     with open(os.path.join(input_directory, output_path), "w") as w:
         for user_id, item_id in predictions:
-            y_true = item_id in target_items[user_id]
+            y_true = int(item_id in target_items[user_id])
             w.write("{}\t{}\t{}\t{}\n".format(user_id, item_id, y_true, 0.0))
 
 
@@ -127,6 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--profile-actions-path', type=str, required=True)
     parser.add_argument('--target-actions-path', type=str, required=True)
     parser.add_argument('--rw-path', type=str, required=True)
+    parser.add_argument('--baseline-name', type=str, required=True)
     parser.add_argument('--output-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
