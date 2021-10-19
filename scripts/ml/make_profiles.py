@@ -121,7 +121,7 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
     item_profiles[1337].print_debug()
-    user_profiles[10160192].print_debug()
+    user_profiles[1].print_debug()
 
     print("Dumping user profiles")
     with open(os.path.join(input_directory, user_profiles_path), "w") as w:

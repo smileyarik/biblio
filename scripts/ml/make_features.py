@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from ml.profiles import OT, CT, RT, Counters, Profile
 from ml.features_lib import ColumnDescription, counter_cos, FeaturesCalcer
-from util import read_jsonl
+from util import read_jsonl, is_site_user
 
 
 def main(
@@ -77,11 +77,16 @@ def main(
 
     print("Calc features")
     calcer = FeaturesCalcer(rw_graph, full_events)
-    ts = start_ts
     features_output = open(os.path.join(input_directory, features_output_path), "w")
 
     bad_candidates_count = 0
     for user_id in tqdm(target_users):
+        user = users[user_id]
+        user_counters = user.counters.slice(OT.GLOBAL, CT.BOOKING, RT.SUM)
+        user_last_ts = start_ts
+        if counter := user_counters.get("", None):
+            user_last_ts = counter.ts
+
         top = {item_id for item_id, _ in book_top[:poptop]}
 
         rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
@@ -106,12 +111,14 @@ def main(
             bad_candidates_count += 1
             continue
 
-        user = users[user_id]
         top = list(sorted(top))
         for item_id in top:
             item = items[item_id]
             target = 1 if item_id in target_items[user_id] else 0
-            features = calcer(user, item, ts)
+            if not is_site_user(user_id):
+                features = calcer(user, item, start_ts)
+            else:
+                features = calcer(user, item, user_last_ts)
             features = '\t'.join([str(ff) for ff in features])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
     features_output.close()
@@ -133,8 +140,8 @@ if __name__ == "__main__":
     parser.add_argument('--user-profiles-path', type=str, required=True)
     parser.add_argument('--profile-actions-path', type=str, required=True)
     parser.add_argument('--target-actions-path', type=str, required=True)
-    parser.add_argument('--poptop', type=int, default=200)
-    parser.add_argument('--items-per-group', type=int, default=400)
+    parser.add_argument('--poptop', type=int, default=300)
+    parser.add_argument('--items-per-group', type=int, default=600)
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
