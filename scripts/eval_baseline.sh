@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="$1"
-BASELINE="$2"
+BASELINE="$2" # popular, random_walk, random
 
 TEMP_FILE="_baseline_predictions.tsv"
 
