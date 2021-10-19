@@ -1,6 +1,8 @@
 import argparse
-import os
 from collections import defaultdict
+import json
+import os
+import random
 
 from tqdm import tqdm
 
@@ -12,7 +14,8 @@ def main(
     profile_actions_path,
     target_actions_path,
     start_ts,
-    output_path
+    output_path,
+    probability
 ):
 
     print("Read target users")
@@ -27,7 +30,7 @@ def main(
     profile_action_gen = read_jsonl(os.path.join(input_directory, profile_actions_path))
     for action in tqdm(profile_action_gen):
         user_id = action["user_id"]
-        item_id = action["item_uniq_id"]
+        item_id = action["item_scf"]
         ts = action["ts"]
         if ts >= start_ts:
             user_links[user_id].append(item_id)
@@ -39,22 +42,28 @@ def main(
         user2user = defaultdict(float)
         user1_items = user_links[user1]
         for item_id in user1_items:
+            if random.random() > probability:
+                continue
             w = 1.0 / len(user1_items)
             item_users = item_links[item_id]
             for user2 in item_users:
+                if random.random() > probability:
+                    continue
                 user2user[user2] += w / len(item_users)
 
         for user2, w in user2user.items():
             user2_items = user_links[user2]
             for item_id in user2_items:
+                if random.random() > probability:
+                    continue
                 graph[user1][item_id] += w / len(user2_items)
 
     print("Dumping graph")
-    records = []
-    for user, items in graph.items():
-        for item, weight in items.items():
-            records.append({"user": user, "item": item, "weight": weight})
-    write_jsonl(os.path.join(input_directory, output_path), records)
+    with open(os.path.join(input_directory, output_path), "w") as w:
+        for user, items in graph.items():
+            for item, weight in items.items():
+                r = {"user": user, "item": item, "weight": weight}
+                w.write(json.dumps(r, ensure_ascii=False).strip() + "\n")
 
 
 if __name__ == "__main__":
@@ -64,5 +73,6 @@ if __name__ == "__main__":
     parser.add_argument("--target-actions-path", type=str, required=True)
     parser.add_argument("--output-path", type=str, required=True)
     parser.add_argument("--start-ts", type=int, required=True)
+    parser.add_argument("--probability", type=float, default=1.0)
     args = parser.parse_args()
     main(**vars(args))

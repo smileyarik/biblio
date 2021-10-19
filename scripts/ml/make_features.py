@@ -45,14 +45,14 @@ def main(
     target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_actions):
         target_users.add(action["user_id"])
-        target_items[action["user_id"]].add(action["item_uniq_id"])
+        target_items[action["user_id"]].add(action["item_scf"])
     print("...{} target users".format(len(target_users)))
 
     print("Read already seen items")
     filter_items = defaultdict(set)
     stat_actions = read_jsonl(os.path.join(input_directory, profile_actions_path))
     for action in tqdm(stat_actions):
-        filter_items[action["user_id"]].add(action["item_uniq_id"])
+        filter_items[action["user_id"]].add(action["item_scf"])
 
     print("Random walk load")
     rw_records = read_jsonl(os.path.join(input_directory, rw_path))
@@ -63,7 +63,7 @@ def main(
     print("Calc candidates")
     book_top = []
     for item_id, item in items.items():
-        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 0))
+        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
         book_top.append((item_id, item_size))
     book_top = sorted(book_top, key=lambda x:-x[1])
 
