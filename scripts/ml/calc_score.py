@@ -23,8 +23,8 @@ def MAP(predictions, labels, k=10):
     def _get_predictions(values):
         return [x[0] for x in sorted(values, key=lambda x: x[1], reverse=True)]
     return mean([
-        precision_at(_get_predictions(user_predictions), labels[user_id], k)
-        for user_id, user_predictions in predictions.items()
+        precision_at(_get_predictions(predictions[user_id]), user_labels, k)
+        for user_id, user_labels in labels.items()
     ])
 
 
@@ -44,7 +44,7 @@ def main(
     true_labels = defaultdict(set)
     target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_actions):
-        true_labels[action["user_id"]].add(action["item_id"])
+        true_labels[action["user_id"]].add(action["item_scf"])
 
     site_predictions = defaultdict(list)
     biblio_predictions = defaultdict(list)
@@ -52,9 +52,9 @@ def main(
         for line in r:
             user_id, item_id, _, prediction = line.strip().split("\t")
             if is_site_user(user_id):
-                site_predictions[user_id].append((item_id, float(prediction)))
+                site_predictions[int(user_id)].append((int(item_id), float(prediction)))
             else:
-                biblio_predictions[user_id].append((item_id, float(prediction)))
+                biblio_predictions[int(user_id)].append((int(item_id), float(prediction)))
 
     print("----- biblio -----")
     print_metrics(biblio_predictions, true_labels)
