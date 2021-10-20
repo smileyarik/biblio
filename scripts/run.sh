@@ -114,4 +114,5 @@ python3 -m ml.predict_catboost \
 echo "==== Calc score"
 python3 -m ml.calc_score \
     --input-directory $DIR \
-    --input-path predictions.tsv
+    --target-actions-path valid_target.jsonl \
+    --predictions-path predictions.tsv

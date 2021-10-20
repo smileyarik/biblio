@@ -20,6 +20,7 @@ python3 -m ml.predict_baseline \
 echo "==== Calc score"
 python3 -m ml.calc_score \
     --input-directory $DIR \
-    --input-path $TEMP_FILE
+    --target-actions-path valid_target.jsonl \
+    --predictions-path $TEMP_FILE
 
 rm $TEMP_FILE

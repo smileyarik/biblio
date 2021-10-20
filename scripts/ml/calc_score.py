@@ -2,27 +2,29 @@ import argparse
 import os
 from collections import defaultdict
 from statistics import mean
-from util import is_site_user
+from tqdm import tqdm
+from util import is_site_user, read_jsonl
 
 
-def precision_at(predictions, labels, k):
-    n = min(len(predictions), k)
-    m = min(sum(labels), k)
-    metric = 0
+def precision_at(predictions, true_labels, k):
+    assert len(true_labels) > 0 # really need?
+    assert len(set(predictions)) == len(predictions) # dups protection
     tp_seen = 0
-    for i in range(n):
-        label = labels[i]
-        if label == 1:
-            tp_seen += label
+    metric = 0
+    for i, item_id in enumerate(predictions[:k]):
+        if item_id in true_labels:
+            tp_seen += 1
             metric += tp_seen / (i + 1)
-    metric /= m
+    metric /= min(len(true_labels), k)
     return metric
 
 
 def MAP(predictions, labels, k=10):
+    def _get_predictions(values):
+        return [x[0] for x in sorted(values, key=lambda x: x[1], reverse=True)]
     return mean([
-        precision_at(pred, labels[user_id], k)
-        for user_id, pred in predictions.items()
+        precision_at(_get_predictions(user_predictions), labels[user_id], k)
+        for user_id, user_predictions in predictions.items()
     ])
 
 
@@ -34,29 +36,36 @@ def print_metrics(predictions, labels):
     print("MAP@100:", MAP(predictions, labels, k=100))
 
 
-def main(input_directory, input_path):
+def main(
+    input_directory,
+    target_actions_path,
+    predictions_path
+):
+    true_labels = defaultdict(set)
+    target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
+    for action in tqdm(target_actions):
+        true_labels[action["user_id"]].add(action["item_id"])
+
     site_predictions = defaultdict(list)
-    site_labels = defaultdict(list)
     biblio_predictions = defaultdict(list)
-    biblio_labels = defaultdict(list)
-    with open(os.path.join(input_directory, input_path)) as r:
+    with open(os.path.join(input_directory, predictions_path)) as r:
         for line in r:
-            user_id, item_id, label, prediction = line.strip().split("\t")
+            user_id, item_id, _, prediction = line.strip().split("\t")
             if is_site_user(user_id):
-                site_predictions[user_id].append(float(prediction))
-                site_labels[user_id].append(int(label))
+                site_predictions[user_id].append((item_id, float(prediction)))
             else:
-                biblio_predictions[user_id].append(float(prediction))
-                biblio_labels[user_id].append(int(label))
+                biblio_predictions[user_id].append((item_id, float(prediction)))
+
     print("----- biblio -----")
-    print_metrics(biblio_predictions, biblio_labels)
+    print_metrics(biblio_predictions, true_labels)
     print("----- site -----")
-    print_metrics(site_predictions, site_labels)
+    print_metrics(site_predictions, true_labels)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-directory', type=str, required=True)
-    parser.add_argument('--input-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--predictions-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
