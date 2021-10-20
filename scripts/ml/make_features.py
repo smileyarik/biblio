@@ -26,7 +26,7 @@ def main(
     print("Read user profiles")
     users = dict()
     with open(os.path.join(input_directory, user_profiles_path), "r") as r:
-        for line in r:
+        for line in tqdm(r):
             profile = Profile.loads(line)
             users[profile.object_id] = profile
     print("...{} users read".format(len(users)))
@@ -34,7 +34,7 @@ def main(
     print("Read item profiles")
     items = dict()
     with open(os.path.join(input_directory, item_profiles_path), "r") as r:
-        for line in r:
+        for line in tqdm(r):
             profile = Profile.loads(line)
             items[profile.object_id] = profile
     print("...{} items read".format(len(items)))
