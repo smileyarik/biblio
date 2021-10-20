@@ -111,14 +111,12 @@ def main(
             bad_candidates_count += 1
             continue
 
+        reduce_ts = user_last_ts if is_site_user(user_id) else start_ts
         top = list(sorted(top))
         for item_id in top:
             item = items[item_id]
             target = 1 if item_id in target_items[user_id] else 0
-            if not is_site_user(user_id):
-                features = calcer(user, item, start_ts)
-            else:
-                features = calcer(user, item, user_last_ts)
+            features = calcer(user, item, reduce_ts)
             features = '\t'.join([str(ff) for ff in features])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
     features_output.close()
