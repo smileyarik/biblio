@@ -23,4 +23,4 @@ python3 -m ml.calc_score \
     --target-actions-path valid_target.jsonl \
     --predictions-path $TEMP_FILE
 
-rm $TEMP_FILE
+# rm $TEMP_FILE
