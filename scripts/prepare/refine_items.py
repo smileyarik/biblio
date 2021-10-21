@@ -92,16 +92,16 @@ def main(
             "id": int(r.pop("recId")),
             "meta": {
                 "is_candidate": False,
-                "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
-                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
+                "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
+                "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
+                "level": r.pop("biblevel"),
                 "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
-                "year": r.pop("yea"),
-                "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
+                "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
+                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
 #                "type": r.pop("material"),
-                "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
-                "level": r.pop("biblevel"),
+                "year": r.pop("yea"),
             }
         }
         clean_meta(record)
@@ -135,8 +135,8 @@ def main(
             "title": r.pop("title"),
             "scf_id": field_to_id[smart_collapse_field],
             "meta": {
-                "smart_collapse_field": smart_collapse_field,
                 "is_candidate": ("is_candidate" in r),
+                "smart_collapse_field": smart_collapse_field,
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
                 "isbn": r.pop("isbn"),
