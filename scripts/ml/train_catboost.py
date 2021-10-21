@@ -3,6 +3,9 @@ import os
 from catboost import Pool, CatBoost
 
 
+RANDOM_SEED = 42
+
+
 def main(
     input_directory,
     train_features_path,
@@ -18,7 +21,8 @@ def main(
     cb_model = CatBoost(params={
         "loss_function": "YetiRank:decay=0.95",
         "iterations": 500,
-        "learning_rate": 0.05
+        "learning_rate": 0.05,
+        "random_seed": RANDOM_SEED
     })
     train_pool = Pool(data=train_features_path, column_description=cd_path)
     valid_pool = Pool(data=valid_features_path, column_description=cd_path)
