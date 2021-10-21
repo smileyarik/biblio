@@ -31,8 +31,9 @@ def make_item_profile(item):
         set_repeated_feature_counter(item_profile, rubric, OT.RUBRIC)
     for serial in meta.get("series", []):
         set_repeated_feature_counter(item_profile, serial, OT.SERIES)
+    for language in meta.get("language", []):
+        set_repeated_feature_counter(item_profile, language, OT.LANGUAGE)
 
-    set_single_feature_counter(item_profile, meta.get("language"), OT.LANGUAGE)
     set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)
 
     return item_profile
