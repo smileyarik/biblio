@@ -124,8 +124,8 @@ def main(
     for r in tqdm(chain(small_site_items, site_items)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
+        language = process_site_feature(r.pop("language_id"), r.pop("language_name"))
         smart_collapse_field = r.pop("smart_collapse_field")
-        language_id = r.pop("language_id")
         assert smart_collapse_field
         if smart_collapse_field not in field_to_id:
             field_to_id[smart_collapse_field] = len(field_to_id)
@@ -140,7 +140,7 @@ def main(
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
                 "isbn": r.pop("isbn"),
-                "language": [language_id] if language_id else [],
+                "language": [language] if language else [],
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
                 "rubrics": [rubric] if rubric else [],
