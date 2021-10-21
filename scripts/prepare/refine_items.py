@@ -163,7 +163,7 @@ def main(
         old_meta = old_record["meta"]
         new_meta = record["meta"]
         old_record["scf_id"] = record["scf_id"]
-        merged_meta = merge_meta(old_meta, new_meta, ("rubrics", "series"))
+        merged_meta = merge_meta(old_meta, new_meta, ("language", "rubrics", "series"))
         old_meta.update(new_meta)
         for field, features in merged_meta.items():
             old_meta[field] = features
