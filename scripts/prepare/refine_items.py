@@ -90,9 +90,9 @@ def main(
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
                 "year": r.pop("yea"),
-                "language": r.pop("lan"),
-                "type": r.pop("material"),
-                "age_rating": r.pop("ager"),
+#                "language": r.pop("lan"),
+#                "type": r.pop("material"),
+#                "age_rating": r.pop("ager"),
                 "level": r.pop("biblevel"),
             }
         }
@@ -128,13 +128,16 @@ def main(
             "meta": {
                 "smart_collapse_field": smart_collapse_field,
                 "is_candidate": ("is_candidate" in r),
-                "rubrics": [rubric] if rubric else [],
-                "series": [serial] if serial else [],
+                "age_restriction": r.pop("ageRestriction_id"),
+                "annotation": r.pop("annotation"),
+                "isbn": r.pop("isbn"),
+                "language": r.pop("language_id"),
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
+                "rubrics": [rubric] if rubric else [],
+                "series": [serial] if serial else [],
+                "type": r.pop("material_id"),
                 "year": r.pop("year_value"),
-                "isbn": r.pop("isbn"),
-                "annotation": r.pop("annotation")
             }
         }
         clean_meta(record)

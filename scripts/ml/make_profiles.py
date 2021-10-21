@@ -10,22 +10,30 @@ from ml.profiles import OT, CT, RT, Profile
 from util import read_jsonl, merge_meta
 
 
-def set_feature_counter(profile, feature, object_type):
+def set_repeated_feature_counter(profile, feature, object_type):
     if feature_id := feature['id']:
         profile.counters.set(object_type, CT.HAS, RT.SUM, feature_id, 1, 0)
+
+
+def set_single_feature_counter(profile, value, object_type):
+    if value:
+        profile.counters.set(object_type, CT.HAS, RT.SUM, value, 1, 0)
 
 
 def make_item_profile(item):
     item_profile = Profile(item["scf_id"], OT.ITEM)
 
     if author := item["author"]:
-        set_feature_counter(item_profile, author, OT.AUTHOR)
+        set_repeated_feature_counter(item_profile, author, OT.AUTHOR)
 
     meta = item["meta"]
     for rubric in meta.get("rubrics", []):
-        set_feature_counter(item_profile, rubric, OT.RUBRIC)
+        set_repeated_feature_counter(item_profile, rubric, OT.RUBRIC)
     for serial in meta.get("series", []):
-        set_feature_counter(item_profile, serial, OT.SERIES)
+        set_repeated_feature_counter(item_profile, serial, OT.SERIES)
+
+    set_single_feature_counter(item_profile, meta.get("language"), OT.LANGUAGE)
+    set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)
 
     return item_profile
 
@@ -119,6 +127,8 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.AGE_RESTRICTION, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.LANGUAGE, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
     item_profiles[1337].print_debug()
     user_profiles[1].print_debug()
