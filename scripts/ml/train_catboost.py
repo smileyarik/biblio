@@ -25,7 +25,7 @@ def main(
     cb_model.fit(train_pool, eval_set=valid_pool)
     cb_model.save_model(output_path)
 
-    print(cb_model.get_feature_importance(valid_pool, prettified=True).head(10))
+    print(cb_model.get_feature_importance(valid_pool, prettified=True).head(100))
 
 
 if __name__ == "__main__":
