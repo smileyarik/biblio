@@ -46,6 +46,7 @@ def main(
     input_directory,
     items_pattern,
     authors_pattern,
+    languages_pattern,
     persons_pattern,
     rubrics_pattern,
     series_pattern,
@@ -69,6 +70,12 @@ def main(
     person_to_id = read_feature_to_id(input_directory, persons_pattern, "person")
     print("... {} biblio/persons read".format(len(person_to_id)))
 
+    print("Reading biblio/languages...")
+    language_to_id = read_feature_to_id(input_directory, languages_pattern, "lan_short")
+    print("... {} biblio/languages read".format(len(person_to_id)))
+
+    age_restriction_to_id = { "0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632 }
+
     print("Reading biblio/items...")
     items_gen = read_csv_files(
         directory=input_directory,
@@ -78,6 +85,7 @@ def main(
 
     items = []
     for r in tqdm(items_gen):
+        age_restriction = r.pop("ager")
         record = {
             "author": process_biblio_feature(r.pop("aut"), author_to_id),
             "title": r.pop("title"),
@@ -86,13 +94,13 @@ def main(
                 "is_candidate": False,
                 "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
                 "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
-                "persons": process_biblio_features(r.pop("person"), (" , "), person_to_id),
+                "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
                 "year": r.pop("yea"),
-#                "language": r.pop("lan"),
+                "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
 #                "type": r.pop("material"),
-#                "age_rating": r.pop("ager"),
+                "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
                 "level": r.pop("biblevel"),
             }
         }
@@ -117,6 +125,7 @@ def main(
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
         smart_collapse_field = r.pop("smart_collapse_field")
+        language_id = r.pop("language_id")
         assert smart_collapse_field
         if smart_collapse_field not in field_to_id:
             field_to_id[smart_collapse_field] = len(field_to_id)
@@ -131,7 +140,7 @@ def main(
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
                 "isbn": r.pop("isbn"),
-                "language": r.pop("language_id"),
+                "language": [language_id] if language_id else [],
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
                 "rubrics": [rubric] if rubric else [],
@@ -192,6 +201,7 @@ if __name__ == "__main__":
     parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
     parser.add_argument('--authors-pattern', type=str, default="authors.csv")
+    parser.add_argument('--languages-pattern', type=str, default="languages.csv")
     parser.add_argument('--persons-pattern', type=str, default="persons.csv")
     parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
     parser.add_argument('--series-pattern', type=str, default="series.csv")
