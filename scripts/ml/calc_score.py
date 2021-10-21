@@ -29,11 +29,11 @@ def MAP(predictions, labels, k=10):
 
 
 def print_metrics(predictions, labels):
-    print("MAP@1:", MAP(predictions, labels, k=1))
-    print("MAP@5:", MAP(predictions, labels, k=5))
-    print("MAP@10:", MAP(predictions, labels, k=10))
-    print("MAP@50:", MAP(predictions, labels, k=50))
-    print("MAP@100:", MAP(predictions, labels, k=100))
+    print("MAP@1  : {:.20f}".format(MAP(predictions, labels, k=1)))
+    print("MAP@5  : {:.20f}".format(MAP(predictions, labels, k=5)))
+    print("MAP@10 : {:.20f}".format(MAP(predictions, labels, k=10)))
+    print("MAP@50 : {:.20f}".format(MAP(predictions, labels, k=50)))
+    print("MAP@100: {:.20f}".format(MAP(predictions, labels, k=100)))
 
 
 def main(

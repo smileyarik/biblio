@@ -16,6 +16,8 @@ class OT(str, Enum):
     SERIES = "SERIES"
     AGE = "AGE"
     GLOBAL = "GLOBAL"
+    AGE_RESTRICTION = "AGE_RESTRICTION"
+    LANGUAGE = "LANGUAGE"
 
 
 class CT(str, Enum):
