@@ -6,8 +6,8 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from ml.profiles import OT, CT, RT, Profile
-from util import read_jsonl, merge_meta, ONE_DAY_SECONDS
+from ml.profiles import OT, CT, RT, Profile, ONE_DAY_SECONDS
+from util import read_jsonl, merge_meta
 
 
 def set_repeated_feature_counter(profile, feature, object_type):
