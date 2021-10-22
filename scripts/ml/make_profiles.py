@@ -136,11 +136,11 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.LANGUAGE, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
     print("Normalize item profiles")
-    for _, item_profile in item_profiles:
-        user_age_slice = item_profile.counters.slice(OT.READER_AGE, CT.BOOKING, RT.SUM)
-        user_age_total = sum(map(lambda c: c.get(0, RT.SUM), user_age_slice))
-        for _, user_age_counter in user_age_slice:
-            user_age_counter.value = user_age_counter.value / user_age_total
+    for _, item_profile in item_profiles.items():
+        total_bookings = item_profile.counters.get(OT.GLOBAL, CT.BOOKING, RT.SUM, '', 0)
+        user_age_counters = item_profile.counters.slice(OT.READER_AGE, CT.BOOKING, RT.SUM)
+        for _, user_age_counter in user_age_counters.items():
+            user_age_counter.value = user_age_counter.value / total_bookings
 
     print("Parsing transactions #2")
     profile_action_gen = read_jsonl(os.path.join(input_directory, profile_actions_path))
