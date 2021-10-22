@@ -164,7 +164,9 @@ def main(
         new_meta = record["meta"]
         old_record["scf_id"] = record["scf_id"]
         merged_meta = merge_meta(old_meta, new_meta, ("language", "rubrics", "series"))
+        is_candidate = old_meta.get("is_candidate", False) or new_meta.get("is_candidate", False)
         old_meta.update(new_meta)
+        old_meta["is_candidate"] = is_candidate
         for field, features in merged_meta.items():
             old_meta[field] = features
         clean_meta(old_record)
