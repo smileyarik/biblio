@@ -7,7 +7,7 @@ from util import is_site_user, read_jsonl
 
 
 def precision_at(predictions, true_labels, k):
-    assert len(predictions) > 0 and len(true_labels) > 0 # really need?
+    assert len(true_labels) > 0 # really need?
     assert len(set(predictions)) == len(predictions) # dups protection
     tp_seen = 0
     metric = 0
@@ -51,8 +51,8 @@ def main(
     for action in tqdm(target_actions):
         labels[action["user_id"]].add(action["item_scf"])
 
-    common_user_ids = predictions.keys() & labels.keys()
-    assert len(common_user_ids) == len(predictions) == len(labels)
+    # predictions ⊂ labels, missing user_ids ~ zero precision
+    assert predictions.keys() <= labels.keys()
 
     print("Calculating metrics")
     site_predictions = []
@@ -60,9 +60,8 @@ def main(
     biblio_predictions = []
     biblio_labels = []
 
-    for user_id in common_user_ids:
+    for user_id, user_labels in labels.items():
         user_predictions = [x[0] for x in sorted(predictions[user_id], key=lambda x: x[1], reverse=True)]
-        user_labels = labels[user_id]
         if is_site_user(user_id):
             site_predictions.append(user_predictions)
             site_labels.append(user_labels)
