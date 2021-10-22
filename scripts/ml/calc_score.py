@@ -7,7 +7,7 @@ from util import is_site_user, read_jsonl
 
 
 def precision_at(predictions, true_labels, k):
-    assert len(true_labels) > 0 # really need?
+    assert len(predictions) > 0 and len(true_labels) > 0 # really need?
     assert len(set(predictions)) == len(predictions) # dups protection
     tp_seen = 0
     metric = 0
@@ -20,11 +20,9 @@ def precision_at(predictions, true_labels, k):
 
 
 def MAP(predictions, labels, k=10):
-    def _get_predictions(values):
-        return [x[0] for x in sorted(values, key=lambda x: x[1], reverse=True)]
     return mean([
-        precision_at(_get_predictions(predictions[user_id]), user_labels, k)
-        for user_id, user_labels in labels.items()
+        precision_at(user_predictions, user_labels, k)
+        for user_predictions, user_labels in zip(predictions, labels)
     ])
 
 
@@ -41,26 +39,41 @@ def main(
     target_actions_path,
     predictions_path
 ):
-    true_labels = defaultdict(set)
+    print("Reading data")
+    predictions = defaultdict(list)
+    with open(os.path.join(input_directory, predictions_path)) as r:
+        for line in tqdm(r):
+            user_id, item_id, _, prediction = line.strip().split("\t")
+            predictions[int(user_id)].append((int(item_id), float(prediction)))
+
+    labels = defaultdict(set)
     target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_actions):
-        true_labels[action["user_id"]].add(action["item_scf"])
+        labels[action["user_id"]].add(action["item_scf"])
 
-    site_predictions = defaultdict(list)
-    biblio_predictions = defaultdict(list)
-    with open(os.path.join(input_directory, predictions_path)) as r:
-        for line in r:
-            user_id, item_id, _, prediction = line.strip().split("\t")
-            if is_site_user(user_id):
-                site_predictions[int(user_id)].append((int(item_id), float(prediction)))
-            else:
-                biblio_predictions[int(user_id)].append((int(item_id), float(prediction)))
+    common_user_ids = predictions.keys() & labels.keys()
+    assert len(common_user_ids) == len(predictions) == len(labels)
 
-    print("----- biblio -----")
-    print_metrics(biblio_predictions, true_labels)
+    print("Calculating metrics")
+    site_predictions = []
+    site_labels = []
+    biblio_predictions = []
+    biblio_labels = []
+
+    for user_id in common_user_ids:
+        user_predictions = [x[0] for x in sorted(predictions[user_id], key=lambda x: x[1], reverse=True)]
+        user_labels = labels[user_id]
+        if is_site_user(user_id):
+            site_predictions.append(user_predictions)
+            site_labels.append(user_labels)
+        else:
+            biblio_predictions.append(user_predictions)
+            biblio_labels.append(user_labels)
+
     print("----- site -----")
-    print_metrics(site_predictions, true_labels)
-
+    print_metrics(site_predictions, site_labels)
+    print("----- biblio -----")
+    print_metrics(biblio_predictions, biblio_labels)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
