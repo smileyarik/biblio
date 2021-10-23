@@ -60,11 +60,14 @@ def main(
     biblio_predictions = []
     biblio_labels = []
 
+    site_no_pred_count = 0
     for user_id, user_labels in labels.items():
         user_predictions = [x[0] for x in sorted(predictions[user_id], key=lambda x: x[1], reverse=True)]
         if is_site_user(user_id):
             site_predictions.append(user_predictions)
             site_labels.append(user_labels)
+            if not user_predictions:
+                site_no_pred_count += 1
         else:
             biblio_predictions.append(user_predictions)
             biblio_labels.append(user_labels)
@@ -72,9 +75,11 @@ def main(
     print("----- site -----")
     print(len(site_labels))
     print_metrics(site_predictions, site_labels)
+    print("Users without predictions: {}".format(site_no_pred_count))
     print("----- biblio -----")
     print(len(biblio_labels))
     print_metrics(biblio_predictions, biblio_labels)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
