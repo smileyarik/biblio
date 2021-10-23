@@ -155,6 +155,11 @@ def main(
             continue
 
         rid = record["id"]
+        if r.pop("deleted", False):
+            if rid in items:
+                items.pop(rid)
+            continue
+
         if rid not in items:
             items[rid] = record
             continue
