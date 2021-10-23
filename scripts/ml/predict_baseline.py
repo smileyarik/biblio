@@ -12,7 +12,7 @@ from ml.features_lib import ColumnDescription, counter_cos, FeaturesCalcer
 from util import read_jsonl
 
 
-PREDICTION_LIMIT = 5
+PREDICTION_LIMIT = 100
 RANDOM_SEED = 23
 
 
@@ -30,8 +30,8 @@ def calc_popular_baseline(
     predictions = []
     for user_id in tqdm(target_users):
         filtered_top = filter(lambda x: x[0] not in filter_items[user_id], top)
-        for item_id, _ in itertools.islice(filtered_top, PREDICTION_LIMIT):
-            predictions.append((user_id, item_id))
+        for item_id, score in itertools.islice(filtered_top, PREDICTION_LIMIT):
+            predictions.append((user_id, item_id, score))
     return predictions
 
 
@@ -48,8 +48,8 @@ def calc_rw_baseline(
     for user_id in tqdm(target_users):
         top = sorted(rw_graph[user_id], key=lambda x: x[1], reverse=True)
         filtered_top = filter(lambda x: x[0] not in filter_items[user_id], top)
-        for item_id, _ in itertools.islice(filtered_top, PREDICTION_LIMIT):
-            predictions.append((user_id, item_id))
+        for item_id, score in itertools.islice(filtered_top, PREDICTION_LIMIT):
+            predictions.append((user_id, item_id, score))
     return predictions
 
 
@@ -64,8 +64,8 @@ def calc_random_baseline(
     for user_id in tqdm(target_users):
         top = random.sample(items.keys(), k=PREDICTION_LIMIT+len(filter_items[user_id]))
         filtered_top = filter(lambda x: x not in filter_items[user_id], top)
-        for item_id in itertools.islice(filtered_top, PREDICTION_LIMIT):
-            predictions.append((user_id, item_id))
+        for i, item_id in enumerate(itertools.islice(filtered_top, PREDICTION_LIMIT)):
+            predictions.append((user_id, item_id, PREDICTION_LIMIT - i))
     return predictions
 
 
@@ -79,7 +79,6 @@ def main(
     rw_path,
     output_path,
 ):
-
     print("Read item profiles")
     items = dict()
     with open(os.path.join(input_directory, item_profiles_path), "r") as r:
@@ -94,14 +93,14 @@ def main(
     target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_actions):
         target_users.add(action["user_id"])
-        target_items[action["user_id"]].add(action["item_uniq_id"])
+        target_items[action["user_id"]].add(action["item_scf"])
     print("...{} target users".format(len(target_users)))
 
     print("Read already seen items")
     filter_items = defaultdict(set)
     stat_actions = read_jsonl(os.path.join(input_directory, profile_actions_path))
     for action in tqdm(stat_actions):
-        filter_items[action["user_id"]].add(action["item_uniq_id"])
+        filter_items[action["user_id"]].add(action["item_scf"])
 
     print(f"Calculating baseline \"{baseline_name}\"")
     if baseline_name == "popular":
@@ -115,9 +114,9 @@ def main(
         raise "unknown baseline name"
 
     with open(os.path.join(input_directory, output_path), "w") as w:
-        for user_id, item_id in predictions:
+        for user_id, item_id, score in predictions:
             y_true = int(item_id in target_items[user_id])
-            w.write("{}\t{}\t{}\t{}\n".format(user_id, item_id, y_true, 0.0))
+            w.write("{}\t{}\t{}\t{}\n".format(user_id, item_id, y_true, score))
 
 
 if __name__ == "__main__":

@@ -48,8 +48,9 @@ class ColumnDescription:
 
 
 class FeaturesCalcer:
-    def __init__(self, rw_graph, full_events):
+    def __init__(self, rw_graph, lstm_graph, full_events):
         self.rw_graph = rw_graph
+        self.lstm_graph = lstm_graph
         self.full_events = full_events
 
     def __call__(self, user, item, ts):
@@ -58,11 +59,15 @@ class FeaturesCalcer:
 
         f = list()
         f.append(self.rw_graph.get(user.object_id, {}).get(item.object_id, 0.0))
+        f.append(self.lstm_graph.get(user.object_id, {}).get(item.object_id, 0.0))
         for rt in [RT.SUM, RT.D7, RT.D30]:
             f.append(counter_cos(ucnt, icnt, OT.AUTHOR, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.LIBRARY, CT.BOOKING, CT.BOOKING, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.RUBRIC, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.SERIES, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
+            f.append(counter_cos(ucnt, icnt, OT.AGE_RESTRICTION, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
+            f.append(counter_cos(ucnt, icnt, OT.LANGUAGE, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
+            f.append(counter_cos(ucnt, icnt, OT.READER_AGE, CT.BOOKING_BY, CT.BOOKING, rt, RT.SUM, ts))
             f.append(float(ucnt.get(OT.GLOBAL, CT.BOOKING, rt, '', ts)))
             item_size = float(icnt.get(OT.GLOBAL, CT.BOOKING, rt, '', ts))
             full_size = float(self.full_events.get(OT.GLOBAL, CT.BOOKING, rt, '', ts))
@@ -72,12 +77,16 @@ class FeaturesCalcer:
     def get_cd(self):
         cd = ColumnDescription()
         cd.add('random_walk')
+        cd.add('lstm_score')
         for rt in [RT.SUM, RT.D7, RT.D30]:
-            cd.add('author_cos_rt' + rt)
-            cd.add('library_cos_rt' + rt)
-            cd.add('rubric_cos_rt' + rt)
-            cd.add('series_cos_rt' + rt)
-            cd.add('user_size_rt' +  rt)
-            cd.add('item_size_rt' + rt)
+            cd.add('author_cos_rt_' + rt)
+            cd.add('library_cos_rt_' + rt)
+            cd.add('rubric_cos_rt_' + rt)
+            cd.add('series_cos_rt_' + rt)
+            cd.add('age_restriction_cos_rt_' + rt)
+            cd.add('language_cos_rt_' + rt)
+            cd.add('reader_age_cos_rt_' + rt)
+            cd.add('user_size_rt_' +  rt)
+            cd.add('item_size_rt_' + rt)
         cd.finish()
         return cd

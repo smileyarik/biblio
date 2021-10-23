@@ -61,7 +61,8 @@ def main(
     print("Dumping graph")
     with open(os.path.join(input_directory, output_path), "w") as w:
         for user, items in graph.items():
-            for item, weight in items.items():
+            toptop = sorted([(item,weight) for item,weight in items.items()], key=lambda x:-x[1])[0:500]
+            for item, weight in toptop:
                 r = {"user": user, "item": item, "weight": weight}
                 w.write(json.dumps(r, ensure_ascii=False).strip() + "\n")
 

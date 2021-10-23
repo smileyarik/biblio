@@ -39,19 +39,16 @@ class MyLSTM:
 def make_weeked_visits(vs, current_ts, pad, max_idx):
     last_week = 1 + int(current_ts - vs[0][1])//(86400*7)
     seq = []
-    if last_week < 6:
-        seq.append(max_idx-1+last_week)
+    seq.append(max_idx-1+last_week)
     for item,ts in vs:
         new_week = 1 + int(current_ts - ts)//(86400*7)
         while last_week > new_week:
             last_week -= 1
-            if last_week < 6:
-                seq.append(max_idx-1+last_week)
+            seq.append(max_idx-1+last_week)
         seq.append(item)
     while last_week > 1:
         last_week -= 1
-        if last_week < 6:
-            seq.append(max_idx-1+last_week)
+        seq.append(max_idx-1+last_week)
         if pad != 0:
             break
 
@@ -88,14 +85,14 @@ def main(
     lstm = MyLSTM()
 
     # some nasty constants I'm too lazy to put into args
-    last_visits = 30
+    last_visits = 100
     min_item_size = 100
-    pad_length = 36
+    pad_length = 210
     batch_size = 32
     BUFFER_SIZE = 10000
     epochs = 4
-    embedding_dim = 256
-    rnn_units = 256
+    embedding_dim = 64
+    rnn_units = 64
 
     print("Read target users")
     target_user_ids = set()
@@ -227,7 +224,10 @@ def main(
     print("Applying model")
     weights = defaultdict(lambda: defaultdict(float))
     for user_id,visits in tqdm(user_visits.items()):
+        if len(weights) == 500:
+            break
         if user_id in target_user_ids:
+            print(len(weights))
             seq = make_weeked_visits(visits, current_ts, 0, idx)
             seq = seq[:-1]
             input_eval = tf.expand_dims(seq, 0)

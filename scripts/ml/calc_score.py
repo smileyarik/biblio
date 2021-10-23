@@ -2,61 +2,84 @@ import argparse
 import os
 from collections import defaultdict
 from statistics import mean
-from util import is_site_user
+from tqdm import tqdm
+from util import is_site_user, read_jsonl
 
 
-def precision_at(predictions, labels, k):
-    n = min(len(predictions), k)
-    m = min(sum(labels), k)
-    metric = 0
+def precision_at(predictions, true_labels, k):
+    assert len(true_labels) > 0 # really need?
+    assert len(set(predictions)) == len(predictions) # dups protection
     tp_seen = 0
-    for i in range(n):
-        label = labels[i]
-        if label == 1:
-            tp_seen += label
+    metric = 0
+    for i, item_id in enumerate(predictions[:k]):
+        if item_id in true_labels:
+            tp_seen += 1
             metric += tp_seen / (i + 1)
-    metric /= m
+    metric /= min(len(true_labels), k)
     return metric
 
 
 def MAP(predictions, labels, k=10):
     return mean([
-        precision_at(pred, labels[user_id], k)
-        for user_id, pred in predictions.items()
+        precision_at(user_predictions, user_labels, k)
+        for user_predictions, user_labels in zip(predictions, labels)
     ])
 
 
 def print_metrics(predictions, labels):
-    print("MAP@1:", MAP(predictions, labels, k=1))
-    print("MAP@5:", MAP(predictions, labels, k=5))
-    print("MAP@10:", MAP(predictions, labels, k=10))
-    print("MAP@50:", MAP(predictions, labels, k=50))
-    print("MAP@100:", MAP(predictions, labels, k=100))
+    print("MAP@1  : {:.20f}".format(MAP(predictions, labels, k=1)))
+    print("MAP@5  : {:.20f}".format(MAP(predictions, labels, k=5)))
+    print("MAP@10 : {:.20f}".format(MAP(predictions, labels, k=10)))
+    print("MAP@50 : {:.20f}".format(MAP(predictions, labels, k=50)))
+    print("MAP@100: {:.20f}".format(MAP(predictions, labels, k=100)))
 
 
-def main(input_directory, input_path):
-    site_predictions = defaultdict(list)
-    site_labels = defaultdict(list)
-    biblio_predictions = defaultdict(list)
-    biblio_labels = defaultdict(list)
-    with open(os.path.join(input_directory, input_path)) as r:
-        for line in r:
-            user_id, item_id, label, prediction = line.strip().split("\t")
-            if is_site_user(user_id):
-                site_predictions[user_id].append(float(prediction))
-                site_labels[user_id].append(int(label))
-            else:
-                biblio_predictions[user_id].append(float(prediction))
-                biblio_labels[user_id].append(int(label))
-    print("----- biblio -----")
-    print_metrics(biblio_predictions, biblio_labels)
+def main(
+    input_directory,
+    target_actions_path,
+    predictions_path
+):
+    print("Reading data")
+    predictions = defaultdict(list)
+    with open(os.path.join(input_directory, predictions_path)) as r:
+        for line in tqdm(r):
+            user_id, item_id, _, prediction = line.strip().split("\t")
+            predictions[int(user_id)].append((int(item_id), float(prediction)))
+
+    labels = defaultdict(set)
+    target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
+    for action in tqdm(target_actions):
+        labels[action["user_id"]].add(action["item_scf"])
+
+    # predictions ⊂ labels, missing user_ids ~ zero precision
+    assert predictions.keys() <= labels.keys()
+
+    print("Calculating metrics")
+    site_predictions = []
+    site_labels = []
+    biblio_predictions = []
+    biblio_labels = []
+
+    for user_id, user_labels in labels.items():
+        user_predictions = [x[0] for x in sorted(predictions[user_id], key=lambda x: x[1], reverse=True)]
+        if is_site_user(user_id):
+            site_predictions.append(user_predictions)
+            site_labels.append(user_labels)
+        else:
+            biblio_predictions.append(user_predictions)
+            biblio_labels.append(user_labels)
+
     print("----- site -----")
+    print(len(site_labels))
     print_metrics(site_predictions, site_labels)
-
+    print("----- biblio -----")
+    print(len(biblio_labels))
+    print_metrics(biblio_predictions, biblio_labels)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-directory', type=str, required=True)
-    parser.add_argument('--input-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--predictions-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

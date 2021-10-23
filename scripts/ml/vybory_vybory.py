@@ -20,21 +20,12 @@ def main(
     items_per_group,
     start_ts,
     profile_actions_path,
-    features_output_path,
-    cd_output_path,
     rw_path,
     lstm_path
 ):
     poptop = items_per_group - rw_top_size - lstm_top_size
+    print(poptop, rw_top_size, lstm_top_size)
     assert poptop >= 0
-
-    print("Read user profiles")
-    users = dict()
-    with open(os.path.join(input_directory, user_profiles_path), "r") as r:
-        for line in tqdm(r):
-            profile = Profile.loads(line)
-            users[profile.object_id] = profile
-    print("...{} users read".format(len(users)))
 
     print("Read item profiles")
     items = dict()
@@ -71,92 +62,66 @@ def main(
     for record in tqdm(lstm_records):
         lstm_graph[record["user"]][record["item"]] = record["weight"]
 
-
     print("Calc candidates")
     book_top = []
     for item_id, item in items.items():
-        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
+        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D7, '', start_ts))
         book_top.append((item_id, item_size))
     book_top = sorted(book_top, key=lambda x:-x[1])
 
-    print("Calc global stat")
-    full_events = Counters()
-    for item_id, item in items.items():
-        for rt in [RT.SUM, RT.D7, RT.D30]:
-            full_events.update_from(item.counters, OT.GLOBAL, CT.BOOKING, rt, CT.BOOKING, rt, start_ts)
-
-    print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
-
-    print("Calc features")
-    calcer = FeaturesCalcer(rw_graph, lstm_graph, full_events)
-    features_output = open(os.path.join(input_directory, features_output_path), "w")
-
+    aaa = 0
     bad_candidates_count = 0
-    all_found_target = 0
+    all_targets_found = 0
     for user_id in tqdm(target_users):
-        user = users[user_id]
-        user_counters = user.counters.slice(OT.GLOBAL, CT.BOOKING, RT.SUM)
-        user_last_ts = start_ts
-        if counter := user_counters.get("", None):
-            user_last_ts = counter.ts
-
-        top = {item_id for item_id, _ in book_top[:poptop]}
-
-        current_size = len(top)
-        rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
-        rw_top.sort(key=lambda x: -x[1])
-        for item_id, _ in rw_top:
-            if len(top) >= current_size + rw_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
+        targets_found = [0, 0, 0]
+        count = 0
+        aaa += 1
+        for item_id, _ in book_top[:poptop]:
+            if item_id in filter_items[user_id]:
                 continue
-            top.add(item_id)
+            count += 1
+            if item_id in target_items[user_id]:
+                targets_found[0] += 1
 
-        current_size = len(top)
-        lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
-        lstm_top.sort(key=lambda x: -x[1])
-        for item_id, _ in lstm_top:
-            if len(top) >= current_size + lstm_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
+        last_count = count
+        for item_id, value in rw_graph.get(user_id, {}).items():
+            if item_id in filter_items[user_id]:
                 continue
-            top.add(item_id)
+            if count == last_count + rw_top_size:
+                break
+            count += 1
+            if item_id in target_items[user_id]:
+                targets_found[1] += 1
 
+        last_count = count
+        for item_id, value in lstm_graph.get(user_id, {}).items():
+            if item_id in filter_items[user_id]:
+                continue
+            if count == last_count + lstm_top_size:
+                break
+            count += 1
+            if item_id in target_items[user_id]:
+                targets_found[2] += 1
 
         tail_top = book_top[poptop:]
         for item_id, _ in tail_top:
-            if len(top) >= items_per_group:
+            if count == items_per_group:
                 break
-            if item_id in top or item_id in filter_items[user_id]:
+            if item_id in filter_items[user_id]:
                 continue
-            top.add(item_id)
+            count += 1
+            if item_id in target_items[user_id]:
+                targets_found[0] += 1
 
-        targets_found = len(top.intersection(target_items[user_id]))
-        all_found_target += targets_found
-        if targets_found == 0:
+        all_targets_found += sum(targets_found)
+        if aaa % 1000 == 1:
+            print(all_targets_found)
+
+        if sum(targets_found) == 0:
             bad_candidates_count += 1
-            continue
 
-        reduce_ts = user_last_ts if is_site_user(user_id) else start_ts
-        top = list(sorted(top))
-        for item_id in top:
-            item = items[item_id]
-            target = 1 if item_id in target_items[user_id] else 0
-            features = calcer(user, item, reduce_ts)
-            features = '\t'.join([str(ff) for ff in features])
-            features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
-    features_output.close()
     print("Users with bad candidates: {}".format(bad_candidates_count))
-    print("Found target:", all_found_target)
-
-    cd = calcer.get_cd()
-    with open(os.path.join(input_directory, cd_output_path), "w") as cd_out:
-        cd_out.write('0\tGroupId\tuser_id\n')
-        cd_out.write('1\tAuxiliary\titem_id\n')
-        cd_out.write('2\tLabel\ttarget\n')
-        for i in range(len(cd.columns)):
-            cd_out.write('%d\t%s\t%s\n' % (i+3, cd.columns[i][1], cd.columns[i][0]))
-
+    print("Targets found:", all_targets_found)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -169,8 +134,6 @@ if __name__ == "__main__":
     parser.add_argument('--lstm-top-size', type=int, default=200)
     parser.add_argument('--items-per-group', type=int, default=600)
     parser.add_argument('--start-ts', type=int, required=True)
-    parser.add_argument('--features-output-path', type=str, required=True)
-    parser.add_argument('--cd-output-path', type=str, required=True)
     parser.add_argument('--rw-path', type=str, required=True)
     parser.add_argument('--lstm-path', type=str, required=True)
     args = parser.parse_args()
