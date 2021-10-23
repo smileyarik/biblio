@@ -46,6 +46,7 @@ def main(
     input_directory,
     items_pattern,
     authors_pattern,
+    languages_pattern,
     persons_pattern,
     rubrics_pattern,
     series_pattern,
@@ -69,6 +70,12 @@ def main(
     person_to_id = read_feature_to_id(input_directory, persons_pattern, "person")
     print("... {} biblio/persons read".format(len(person_to_id)))
 
+    print("Reading biblio/languages...")
+    language_to_id = read_feature_to_id(input_directory, languages_pattern, "lan_short")
+    print("... {} biblio/languages read".format(len(person_to_id)))
+
+    age_restriction_to_id = { "0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632 }
+
     print("Reading biblio/items...")
     items_gen = read_csv_files(
         directory=input_directory,
@@ -78,22 +85,23 @@ def main(
 
     items = []
     for r in tqdm(items_gen):
+        age_restriction = r.pop("ager")
         record = {
             "author": process_biblio_feature(r.pop("aut"), author_to_id),
             "title": r.pop("title"),
             "id": int(r.pop("recId")),
             "meta": {
                 "is_candidate": False,
-                "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
-                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
-                "persons": process_biblio_features(r.pop("person"), (" , "), person_to_id),
+                "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
+                "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
+                "level": r.pop("biblevel"),
+                "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
                 "place": r.pop("place"),
                 "publisher": r.pop("publ"),
+                "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
+                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
+#                "type": r.pop("material"),
                 "year": r.pop("yea"),
-                "language": r.pop("lan"),
-                "type": r.pop("material"),
-                "age_rating": r.pop("ager"),
-                "level": r.pop("biblevel"),
             }
         }
         clean_meta(record)
@@ -116,6 +124,7 @@ def main(
     for r in tqdm(chain(small_site_items, site_items)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
+        language = process_site_feature(r.pop("language_id"), r.pop("language_name"))
         smart_collapse_field = r.pop("smart_collapse_field")
         assert smart_collapse_field
         if smart_collapse_field not in field_to_id:
@@ -126,15 +135,18 @@ def main(
             "title": r.pop("title"),
             "scf_id": field_to_id[smart_collapse_field],
             "meta": {
-                "smart_collapse_field": smart_collapse_field,
                 "is_candidate": ("is_candidate" in r),
-                "rubrics": [rubric] if rubric else [],
-                "series": [serial] if serial else [],
+                "smart_collapse_field": smart_collapse_field,
+                "age_restriction": r.pop("ageRestriction_id"),
+                "annotation": r.pop("annotation"),
+                "isbn": r.pop("isbn"),
+                "language": [language] if language else [],
                 "place": r.pop("place_name"),
                 "publisher": r.pop("publisher_name"),
+                "rubrics": [rubric] if rubric else [],
+                "series": [serial] if serial else [],
+                "type": r.pop("material_id"),
                 "year": r.pop("year_value"),
-                "isbn": r.pop("isbn"),
-                "annotation": r.pop("annotation")
             }
         }
         clean_meta(record)
@@ -151,8 +163,10 @@ def main(
         old_meta = old_record["meta"]
         new_meta = record["meta"]
         old_record["scf_id"] = record["scf_id"]
-        merged_meta = merge_meta(old_meta, new_meta, ("rubrics", "series"))
+        merged_meta = merge_meta(old_meta, new_meta, ("language", "rubrics", "series"))
+        is_candidate = old_meta.get("is_candidate", False) or new_meta.get("is_candidate", False)
         old_meta.update(new_meta)
+        old_meta["is_candidate"] = is_candidate
         for field, features in merged_meta.items():
             old_meta[field] = features
         clean_meta(old_record)
@@ -189,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--items-pattern', type=str, default="cat_*.csv")
     parser.add_argument('--authors-pattern', type=str, default="authors.csv")
+    parser.add_argument('--languages-pattern', type=str, default="languages.csv")
     parser.add_argument('--persons-pattern', type=str, default="persons.csv")
     parser.add_argument('--rubrics-pattern', type=str, default="rubrics.csv")
     parser.add_argument('--series-pattern', type=str, default="series.csv")
