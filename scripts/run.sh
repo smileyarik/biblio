@@ -25,6 +25,7 @@ then
     exit 1
 fi
 
+if false; then
 echo "==== Split actions"
 python3 -m ml.split_actions \
     --input-directory $DIR \
@@ -55,6 +56,7 @@ python3 -m ml.make_profiles \
     --item-profiles-path valid_item_profiles.jsonl \
     --user-profiles-path valid_user_profiles.jsonl
 
+fi
 echo "==== Random walk (train)"
 python3 -m ml.random_walk \
     --input-directory $DIR \
@@ -62,7 +64,7 @@ python3 -m ml.random_walk \
     --target-actions-path train_target.jsonl \
     --output-path train_random_walk.jsonl \
     --start-ts $TRAIN_PAGERANK_TS \
-    --probability 0.1
+    --probability 1.0
 
 echo "==== Random walk (valid)"
 python3 -m ml.random_walk \
@@ -71,8 +73,27 @@ python3 -m ml.random_walk \
     --target-actions-path valid_target.jsonl \
     --output-path valid_random_walk.jsonl \
     --start-ts $VALID_PAGERANK_TS \
-    --probability 0.1
+    --probability 1.0
 
+echo "==== LSTM (train)"
+python3 -m ml.lstm \
+    --input-directory $DIR \
+    --profile-actions-path train_stat.jsonl \
+    --target-actions-path train_target.jsonl \
+    --checkpoint-path train_lstm_checkpoint \
+    --output-path train_lstm.jsonl \
+    --current-ts $TRAIN_FINISH_TS
+
+echo "==== LSTM (valid)"
+python3 -m ml.lstm \
+    --input-directory $DIR \
+    --profile-actions-path valid_stat.jsonl \
+    --target-actions-path valid_target.jsonl \
+    --checkpoint-path valid_lstm_checkpoint \
+    --output-path valid_lstm.jsonl \
+    --current-ts $VALID_FINISH_TS
+
+if false; then
 echo "==== Make features (train)"
 python3 -m ml.make_features \
     --input-directory $DIR \
@@ -115,3 +136,4 @@ echo "==== Calc score"
 python3 -m ml.calc_score \
     --input-directory $DIR \
     --input-path predictions.tsv
+fi

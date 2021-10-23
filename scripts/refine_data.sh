@@ -12,10 +12,10 @@ fi
 mkdir -p $OUTPUT_DIR
 
 echo "-----items-----"
-#python3 -m prepare.refine_items --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/items.jsonl"
+python3 -m prepare.refine_items --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/items.jsonl"
 
 echo "-----users-----"
-#python3 -m prepare.refine_users --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/users.jsonl"
+python3 -m prepare.refine_users --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/users.jsonl"
 
 echo "-----actions-----"
 python3 -m prepare.refine_actions \
