@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="$1"
-FULL_TRAIN=0
+FULL_TRAIN=1
 
 if [ $FULL_TRAIN == 1 ]; then
     TRAIN_RW_TS=1613520000
