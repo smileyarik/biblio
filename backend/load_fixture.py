@@ -1,8 +1,11 @@
-import sys
+import django
 import os
+import sys
+
 from collections import defaultdict
 from django.core import serializers
-import django
+from tqdm import tqdm
+
 
 if __name__ == "__main__":
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'backend.settings')
@@ -13,7 +16,7 @@ if __name__ == "__main__":
     with open(file_name) as r:
         deserialized = serializers.deserialize("jsonl", r)
 
-        for item in deserialized:
+        for item in tqdm(deserialized):
             obj = item.object
             obj_dict[obj.__class__].append(obj)
 

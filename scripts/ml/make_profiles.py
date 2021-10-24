@@ -7,7 +7,7 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from ml.profiles import OT, CT, RT, Profile
-from util import read_jsonl, merge_meta
+from util import read_jsonl, is_site_user, merge_meta
 
 
 # reader age statistics in item profile is stored as histogram with bins of size below (in years)
@@ -81,6 +81,7 @@ def main(
     users_path,
     profile_actions_path,
     target_actions_path,
+    make_for_site,
     item_profiles_path,
     user_profiles_path
 ):
@@ -88,11 +89,18 @@ def main(
     user_profiles = dict()
 
     target_user_ids = set()
+    def _is_target_user(user_id):
+        if make_for_site:
+            return is_site_user(user_id)
+        return not target_user_ids or user_id in target_user_ids
 
     print("Read target users")
-    target_action_gen = read_jsonl(os.path.join(input_directory, target_actions_path))
-    for action in tqdm(target_action_gen):
-        target_user_ids.add(action["user_id"])
+    if target_actions_path:
+        target_action_gen = read_jsonl(os.path.join(input_directory, target_actions_path))
+        for action in tqdm(target_action_gen):
+            target_user_ids.add(action["user_id"])
+    else:
+        print("... omitted")
 
     print("Read books data")
     item_gen = read_jsonl(os.path.join(input_directory, items_path))
@@ -128,7 +136,7 @@ def main(
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
             item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
-            if user_id not in target_user_ids:
+            if _is_target_user(user_id):
                 continue
 
             user_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
@@ -162,8 +170,9 @@ def main(
         user_profile = user_profiles[user_id]
         item_profile = item_profiles[item_id]
 
-        if user_id not in target_user_ids:
+        if not _is_target_user(user_id):
             continue
+
         for rt in [RT.SUM, RT.D7, RT.D30]:
             user_profile.counters.update_from(
                 item_profile.counters, OT.READER_AGE, CT.BOOKING,
@@ -176,7 +185,7 @@ def main(
     print("Dumping user profiles")
     with open(os.path.join(input_directory, user_profiles_path), "w") as w:
         for user_id, user_profile in user_profiles.items():
-            if user_id not in target_user_ids:
+            if not _is_target_user(user_id):
                 continue
             user_profile.dump(w)
 
@@ -192,7 +201,8 @@ if __name__ == "__main__":
     parser.add_argument('--items-path', type=str, default="items.jsonl")
     parser.add_argument('--users-path', type=str, default="users.jsonl")
     parser.add_argument('--profile-actions-path', type=str, required=True)
-    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=False)
+    parser.add_argument('--make-for-site', action="store_true", default=False)
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
     args = parser.parse_args()

@@ -28,6 +28,11 @@ def main(
     poptop = items_per_group - rw_top_size - lstm_top_size
     assert poptop >= 0
 
+    # in train mode features are calculated only for users:
+    # (a) mentioned in target actions
+    # (b) with at least one positive in generated candidated
+    train_mode = True
+
     print("Read user profiles")
     users = dict()
     with open(os.path.join(input_directory, user_profiles_path), "r") as r:
@@ -47,11 +52,17 @@ def main(
     print("Read target users")
     target_users = set()
     target_items = defaultdict(set)
-    target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
-    for action in tqdm(target_actions):
-        target_users.add(action["user_id"])
-        target_items[action["user_id"]].add(action["item_scf"])
-    print("...{} target users".format(len(target_users)))
+
+    if target_actions_path:
+        target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
+        for action in tqdm(target_actions):
+            target_users.add(action["user_id"])
+            target_items[action["user_id"]].add(action["item_scf"])
+        print("...{} target users".format(len(target_users)))
+    else:
+        target_users = set(users.keys())
+        train_mode = False
+        print("...omitted")
 
     print("Read already seen items")
     filter_items = defaultdict(set)
@@ -135,11 +146,13 @@ def main(
                 continue
             top.add(item_id)
 
-        targets_found = len(top.intersection(target_items[user_id]))
-        all_found_target += targets_found
-        if targets_found == 0:
-            bad_candidates_count += 1
-            continue
+
+        if train_mode:
+            targets_found = len(top.intersection(target_items[user_id]))
+            all_found_target += targets_found
+            if targets_found == 0:
+                bad_candidates_count += 1
+                continue
 
         reduce_ts = user_last_ts if is_site_user(user_id) else start_ts
         top = list(sorted(top))
@@ -150,8 +163,10 @@ def main(
             features = '\t'.join([str(ff) for ff in features])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
     features_output.close()
-    print("Users with bad candidates: {}".format(bad_candidates_count))
-    print("Found target:", all_found_target)
+
+    if train_mode:
+        print("Users with bad candidates: {}".format(bad_candidates_count))
+        print("Found target:", all_found_target)
 
     cd = calcer.get_cd()
     with open(os.path.join(input_directory, cd_output_path), "w") as cd_out:
@@ -168,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
     parser.add_argument('--profile-actions-path', type=str, required=True)
-    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=False)
     parser.add_argument('--rw-top-size', type=int, default=200)
     parser.add_argument('--lstm-top-size', type=int, default=200)
     parser.add_argument('--items-per-group', type=int, default=600)
