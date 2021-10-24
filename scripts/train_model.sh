@@ -73,24 +73,6 @@ python3 -m ml.random_walk \
     --start-ts $VALID_RW_TS \
     --top-k 1000
 
-echo "==== LSTM (train)"
-python3 -m ml.lstm \
-    --input-directory $DIR \
-    --profile-actions-path train_stat.jsonl \
-    --target-actions-path train_target.jsonl \
-    --checkpoint-path train_lstm_checkpoint \
-    --output-path train_lstm.jsonl \
-    --current-ts $TRAIN_FINISH_TS
-
-echo "==== LSTM (valid)"
-python3 -m ml.lstm \
-    --input-directory $DIR \
-    --profile-actions-path valid_stat.jsonl \
-    --target-actions-path valid_target.jsonl \
-    --checkpoint-path valid_lstm_checkpoint \
-    --output-path valid_lstm.jsonl \
-    --current-ts $VALID_FINISH_TS
-
 echo "==== Make features (train)"
 python3 -m ml.make_features \
     --input-directory $DIR \
