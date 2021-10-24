@@ -78,8 +78,7 @@ def main(
     profile_actions_path,
     target_actions_path,
     item_profiles_path,
-    user_profiles_path,
-    make_for_all
+    user_profiles_path
 ):
     item_profiles = dict()
     user_profiles = dict()
@@ -126,7 +125,7 @@ def main(
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
             item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
-            if user_id not in target_user_ids and not make_for_all:
+            if user_id not in target_user_ids:
                 continue
 
             user_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
@@ -160,7 +159,7 @@ def main(
         user_profile = user_profiles[user_id]
         item_profile = item_profiles[item_id]
 
-        if user_id not in target_user_ids and not make_for_all:
+        if user_id not in target_user_ids:
             continue
         for rt in [RT.SUM, RT.D7, RT.D30]:
             user_profile.counters.update_from(
@@ -174,7 +173,7 @@ def main(
     print("Dumping user profiles")
     with open(os.path.join(input_directory, user_profiles_path), "w") as w:
         for user_id, user_profile in user_profiles.items():
-            if user_id not in target_user_ids and not make_for_all:
+            if user_id not in target_user_ids:
                 continue
             user_profile.dump(w)
 
@@ -193,6 +192,5 @@ if __name__ == "__main__":
     parser.add_argument('--target-actions-path', type=str, required=True)
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
-    parser.add_argument('--make-for-all', action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))
