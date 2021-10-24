@@ -11,7 +11,7 @@ bash +x refine_data.sh ../../data ../../workdir
 
 ### Train model
 ```
-bash +x run.sh ../../workdir
+bash +x train_model.sh ../../workdir
 ```
 
 ### Run tests
