@@ -22,7 +22,7 @@ def main(
             "pk": action["id"],
             "fields": {
                 "id": action["id"],
-                "book": action["item_id"],
+                "book": action["item_scf"],
                 "user": action["user_id"],
                 "type": action["type"],
                 "time": datetime.fromtimestamp(action["ts"]).strftime("%Y-%m-%dT%H:%M:%S")
