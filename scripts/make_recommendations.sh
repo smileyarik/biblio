@@ -62,6 +62,14 @@ python3 -m ml.predict_catboost \
     --model-path model.bin \
     --output-path final_predictions.tsv
 
+echo "==== Cold top"
+python3 -m ml.top_items \
+    --input-directory $DIR \
+    --item-profiles-path final_item_profiles.jsonl \
+    --output-path top_items.tsv \
+    --start-ts $RECOMMENDER_TS
+cat $DIR/top_items.tsv >> $DIR/final_predictions.tsv
+
 echo "==== Make items fixture"
 python3 -m deploy.make_items_fixture \
     --input-directory $DIR \

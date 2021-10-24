@@ -23,6 +23,7 @@ def main(
             }
         }
         django_items.append(django_item)
+    django_items += [{"model": "recsys.user", "pk": 0, "fields": {"id": 0}}]
 
     write_jsonl(os.path.join(input_directory, fixture_path), django_items)
 
