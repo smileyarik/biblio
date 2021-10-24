@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import os
+import random
 from collections import defaultdict
 
 from tqdm import tqdm
@@ -25,7 +26,8 @@ def main(
     cd_output_path,
     rw_path,
     lstm_path,
-    als_path
+    als_path,
+    prob
 ):
     poptop = items_per_group - rw_top_size - lstm_top_size - als_top_size
     assert poptop >= 0
@@ -118,6 +120,8 @@ def main(
     bad_candidates_count = 0
     all_found_target = 0
     for user_id in tqdm(target_users):
+        if not is_site_user(user_id) and random.random() > prob:
+            continue
         user = users[user_id]
         user_counters = user.counters.slice(OT.GLOBAL, CT.BOOKING, RT.SUM)
         user_last_ts = start_ts
@@ -215,5 +219,6 @@ if __name__ == "__main__":
     parser.add_argument('--rw-path', type=str, default=None)
     parser.add_argument('--lstm-path', type=str, default=None)
     parser.add_argument('--als-path', type=str, default=None)
+    parser.add_argument('--prob', type=float, default=1.0)
     args = parser.parse_args()
     main(**vars(args))
