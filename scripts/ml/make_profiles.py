@@ -133,8 +133,14 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.counters.update_from(item_profile.counters, OT.AGE_RESTRICTION, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.counters.update_from(item_profile.counters, OT.LANGUAGE, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(
+                item_profile.counters, OT.AGE_RESTRICTION,
+                CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts
+            )
+            user_profile.counters.update_from(
+                item_profile.counters, OT.LANGUAGE,
+                CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts
+            )
 
     print("Normalize item profiles")
     for _, item_profile in item_profiles.items():
@@ -157,7 +163,10 @@ def main(
         if user_id not in target_user_ids and not make_for_all:
             continue
         for rt in [RT.SUM, RT.D7, RT.D30]:
-            user_profile.counters.update_from(item_profile.counters, OT.READER_AGE, CT.BOOKING, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(
+                item_profile.counters, OT.READER_AGE, CT.BOOKING,
+                RT.SUM, CT.BOOKING_BY, rt, ts
+            )
 
     item_profiles[1337].print_debug()
     user_profiles[1].print_debug()
@@ -187,4 +196,3 @@ if __name__ == "__main__":
     parser.add_argument('--make-for-all', action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))
-

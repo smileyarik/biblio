@@ -75,13 +75,12 @@ def main(
         for record in tqdm(lstm_records):
             lstm_graph[record["user"]][record["item"]] = record["weight"]
 
-
     print("Calc candidates")
     book_top = []
     for item_id, item in items.items():
         item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
         book_top.append((item_id, item_size))
-    book_top = sorted(book_top, key=lambda x:-x[1])
+    book_top = sorted(book_top, key=lambda x: -x[1])
 
     print("Calc global stat")
     full_events = Counters()

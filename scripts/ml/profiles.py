@@ -11,7 +11,7 @@ class OT(str, Enum):
     ITEM = "ITEM"
     USER = "USER"
     AUTHOR = "AUTHOR"
-    LIBRARY= "LIBRARY"
+    LIBRARY = "LIBRARY"
     RUBRIC = "RUBRIC"
     SERIES = "SERIES"
     AGE = "AGE"
@@ -67,7 +67,7 @@ class CounterKey:
 
 
 class Counter:
-    def __init__(self, value = 0, ts = 0):
+    def __init__(self, value=0, ts=0):
         self.value = value
         self.ts = ts
 

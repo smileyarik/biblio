@@ -24,9 +24,9 @@ def main(
             item_ids.append(fields[1])
 
     pool = Pool(data=features_path, column_description=cd_path)
-    y_true = [int(l) for l in pool.get_label()]
+    y_true = [int(label) for label in pool.get_label()]
 
-    model= CatBoost()
+    model = CatBoost()
     model.load_model(model_path)
     result = model.predict(pool)
 

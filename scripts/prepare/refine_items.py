@@ -2,11 +2,12 @@ import argparse
 import os
 import string
 from itertools import chain
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from tqdm import tqdm
 
 from util import read_csv_files, write_jsonl, read_jsonl, read_json, merge_meta
+from prepare.tfidf import get_keywords, load_idfs
 
 
 def read_feature_to_id(
@@ -19,7 +20,7 @@ def read_feature_to_id(
         pattern=pattern,
         encoding="cp1251"
     )
-    return {a[feature] : int(a["id"]) for a in gen}
+    return {a[feature]: int(a["id"]) for a in gen}
 
 
 def process_biblio_feature(value, mapping):
@@ -52,8 +53,14 @@ def main(
     series_pattern,
     site_items_path,
     site_small_items_path,
+    idfs_path,
     output_path
 ):
+    word2idf = None
+    if idfs_path:
+        print("Reading IDFs...")
+        word2idf = load_idfs(idfs_path)
+
     print("Reading biblio/authors...")
     author_to_id = read_feature_to_id(input_directory, authors_pattern, "author")
     print("... {} biblio/authors read".format(len(author_to_id)))
@@ -74,7 +81,7 @@ def main(
     language_to_id = read_feature_to_id(input_directory, languages_pattern, "lan_short")
     print("... {} biblio/languages read".format(len(person_to_id)))
 
-    age_restriction_to_id = { "0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632 }
+    age_restriction_to_id = {"0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632}
 
     print("Reading biblio/items...")
     items_gen = read_csv_files(
@@ -84,6 +91,7 @@ def main(
     )
 
     items = []
+    biblio_types = Counter()
     for r in tqdm(items_gen):
         age_restriction = r.pop("ager")
         record = {
@@ -100,15 +108,18 @@ def main(
                 "publisher": r.pop("publ"),
                 "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
                 "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
-#                "type": r.pop("material"),
+                "type": r.pop("material"),
                 "year": r.pop("yea"),
             }
         }
+        biblio_types[record["meta"]["type"]] += 1
+
         clean_meta(record)
         assert record["id"]
         if not record["title"]:
             continue
         items.append(record)
+    print(biblio_types.most_common(100))
 
     items = {r["id"]: r for r in items}
     print("... {} biblio/items read".format(len(items)))
@@ -121,6 +132,7 @@ def main(
     print("Reading big site/items...")
     field_to_id = dict()
     site_items = read_jsonl(os.path.join(input_directory, site_items_path))
+    site_types = Counter()
     for r in tqdm(chain(small_site_items, site_items)):
         rubric = process_site_feature(r.pop("rubric_id"), r.pop("rubric_name"))
         serial = process_site_feature(r.pop("serial_id"), r.pop("serial_name"))
@@ -149,6 +161,13 @@ def main(
                 "year": r.pop("year_value"),
             }
         }
+        site_types[(r.pop("material_id"), r.pop("material_name"))] += 1
+        if word2idf:
+            annotation = record["meta"]["annotation"]
+            annotation = " ".join(annotation.split()[:200])
+            record["meta"]["keywords"] = get_keywords(annotation, word2idf, k=10)
+            record["meta"]["keywords"] += get_keywords(record["title"], word2idf, k=3)
+
         clean_meta(record)
         assert record["id"]
         if not record["title"]:
@@ -176,6 +195,7 @@ def main(
             old_meta[field] = features
         clean_meta(old_record)
 
+    print(site_types.most_common(100))
     items = {rid: item for rid, item in items.items() if item.get("scf_id")}
     print("... {} items read overall".format(len(items)))
 
@@ -214,6 +234,7 @@ if __name__ == "__main__":
     parser.add_argument('--series-pattern', type=str, default="series.csv")
     parser.add_argument('--site-items-path', type=str, default="all_books.jsonl")
     parser.add_argument('--site-small-items-path', type=str, default="items.json")
+    parser.add_argument('--idfs-path', type=str, default=None)
     parser.add_argument('--output-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

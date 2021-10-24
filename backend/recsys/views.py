@@ -1,4 +1,6 @@
+import pickle
 import random
+import numpy as np
 
 from distutils.util import strtobool
 
@@ -20,7 +22,7 @@ class LightFMModel:
     def predict(self, user_id, k):
         user_idx = self.model.user_id2idx[user_id]
         items_indices = np.arange(len(self.model.item_idx2id))
-        scores = collab_model.predict(user_idx, items_indices)
+        scores = self.model.predict(user_idx, items_indices)
         return [self.model.item_idx2id[i] for i in np.argsort(-scores)[:k]]
 
 

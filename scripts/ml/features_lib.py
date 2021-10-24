@@ -90,7 +90,7 @@ class FeaturesCalcer:
             cd.add('age_restriction_cos_rt_' + rt)
             cd.add('language_cos_rt_' + rt)
             cd.add('reader_age_cos_rt_' + rt)
-            cd.add('user_size_rt_' +  rt)
+            cd.add('user_size_rt_' + rt)
             cd.add('item_size_rt_' + rt)
         cd.finish()
         return cd

@@ -17,6 +17,7 @@ class ActionSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     actions = serializers.SlugRelatedField(read_only=True, many=True, slug_field='title')
+
     class Meta:
         model = User
         fields = ("id", "actions")
