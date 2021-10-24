@@ -228,7 +228,7 @@ def main(
     weights = defaultdict(lambda: defaultdict(float))
     for user_id,visits in tqdm(user_visits.items()):
         if user_id in target_user_ids:
-            seq = make_weeked_visits(visits, current_ts, 0, idx)
+            seq = make_weeked_visits(visits, current_ts, 0, lstm.last_week_idx)
             seq = seq[:-1]
             input_eval = tf.expand_dims(seq, 0)
             lstm.model.reset_states()

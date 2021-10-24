@@ -76,30 +76,34 @@ def main(
         targets_found = [0, 0, 0]
         count = 0
         aaa += 1
+        user_items = set()
         for item_id, _ in book_top[:poptop]:
-            if item_id in filter_items[user_id]:
+            if item_id in filter_items[user_id] or item_id in user_items:
                 continue
             count += 1
+            user_items.add(item_id)
             if item_id in target_items[user_id]:
                 targets_found[0] += 1
 
         last_count = count
         for item_id, value in rw_graph.get(user_id, {}).items():
-            if item_id in filter_items[user_id]:
+            if item_id in filter_items[user_id] or item_id in user_items:
                 continue
             if count == last_count + rw_top_size:
                 break
             count += 1
+            user_items.add(item_id)
             if item_id in target_items[user_id]:
                 targets_found[1] += 1
 
         last_count = count
         for item_id, value in lstm_graph.get(user_id, {}).items():
-            if item_id in filter_items[user_id]:
+            if item_id in filter_items[user_id] or item_id in user_items:
                 continue
             if count == last_count + lstm_top_size:
                 break
             count += 1
+            user_items.add(item_id)
             if item_id in target_items[user_id]:
                 targets_found[2] += 1
 
@@ -107,9 +111,10 @@ def main(
         for item_id, _ in tail_top:
             if count == items_per_group:
                 break
-            if item_id in filter_items[user_id]:
+            if item_id in filter_items[user_id] or item_id in user_items:
                 continue
             count += 1
+            user_items.add(item_id)
             if item_id in target_items[user_id]:
                 targets_found[0] += 1
 

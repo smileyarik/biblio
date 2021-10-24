@@ -33,6 +33,8 @@ def make_item_profile(item):
         set_repeated_feature_counter(item_profile, serial, OT.SERIES)
     for language in meta.get("language", []):
         set_repeated_feature_counter(item_profile, language, OT.LANGUAGE)
+    for lib_id, count in meta.get("libraries", {}).items():
+        item_profile.counters.set(OT.LIBRARY, CT.VALUE, RT.SUM, lib_id, count, 0)
 
     set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)
 
@@ -59,13 +61,19 @@ def merge_items(item1, item2):
     meta2 = item2["meta"]
     assert item1["scf_id"] == item2["scf_id"]
     merged_meta = merge_meta(meta1, meta2, ("rubrics", "series"))
+
+    libraries = defaultdict(int)
+    for meta in [meta1, meta2]:
+        for lib, count in meta['libraries'].items():
+            libraries[lib] += count
     item = {
         "author": item1["author"],
         "title": item1["title"],
         "scf_id": item1["scf_id"],
         "meta": {
             "rubrics": merged_meta["rubrics"],
-            "series": merged_meta["series"]
+            "series": merged_meta["series"],
+            "libraries": libraries
         }
     }
     return item
@@ -114,6 +122,7 @@ def main(
         user_id = action["user_id"]
         item_id = action["item_scf"]
         ts = action["ts"]
+        library = action['library_id'] if 'library_id' in action else None
         assert user_id in user_profiles
         assert item_id in item_profiles
         user_profile = user_profiles[user_id]
@@ -125,8 +134,13 @@ def main(
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
             item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
+            if library != None:
+                item_profile.counters.add(OT.LIBRARY, CT.BOOKING, rt, library, 1, ts)
             if user_id not in target_user_ids and not make_for_all:
                 continue
+
+            if library != None:
+                user_profile.counters.add(OT.LIBRARY, CT.BOOKING, rt, library, 1, ts)
 
             user_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
             user_profile.counters.update_from(item_profile.counters, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)

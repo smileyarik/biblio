@@ -147,6 +147,8 @@ def main(
                 "series": [serial] if serial else [],
                 "type": r.pop("material_id"),
                 "year": r.pop("year_value"),
+                "libraries" : {int(r["libraryId"]) : r['totalOutCount']
+                    for r in r.pop("libraryAvailability")} if 'libraryAvailability' in r else {},
             }
         }
         clean_meta(record)
