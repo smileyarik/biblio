@@ -9,7 +9,7 @@ class Book(models.Model):
     book_id = models.IntegerField()
 
     def __str__(self):
-        return '{} ({}): "{}", {}'.format(self.id, seld.book_id, self.title, self.author)
+        return '{} ({}): "{}", {}'.format(self.id, self.book_id, self.title, self.author)
 
 
 class User(models.Model):

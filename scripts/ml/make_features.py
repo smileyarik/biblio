@@ -27,7 +27,7 @@ def main(
     lstm_path,
     als_path
 ):
-    poptop = items_per_group - rw_top_size - lstm_top_size
+    poptop = items_per_group - rw_top_size - lstm_top_size - als_top_size
     assert poptop >= 0
 
     # in train mode features are calculated only for users:
@@ -206,9 +206,9 @@ if __name__ == "__main__":
     parser.add_argument('--profile-actions-path', type=str, required=True)
     parser.add_argument('--target-actions-path', type=str, required=False)
     parser.add_argument('--rw-top-size', type=int, default=200)
-    parser.add_argument('--lstm-top-size', type=int, default=200)
-    parser.add_argument('--als-top-size', type=int, default=200)
-    parser.add_argument('--items-per-group', type=int, default=800)
+    parser.add_argument('--lstm-top-size', type=int, default=0)
+    parser.add_argument('--als-top-size', type=int, default=0)
+    parser.add_argument('--items-per-group', type=int, default=400)
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
