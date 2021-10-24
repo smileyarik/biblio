@@ -40,7 +40,7 @@ def get_keywords(text, word2idf, word2idx, k=10):
         if idf := word2idf.get(token, None):
             idf = word2idf.get(token, 0.0)
             tfidf = tf * idf
-            data.append((tfidf, token))
+            data.append((tfidf, word2idx[token]))
     data.sort(reverse=True)
     return [t for _, t in data[:k]]
 
