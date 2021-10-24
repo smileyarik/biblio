@@ -32,7 +32,7 @@ python3 -m ml.filter_actions \
     --new-actions-path site_actions.jsonl \
     --site
 
-echo "==== Random walk (valid)"
+echo "==== Random walk"
 python3 -m ml.random_walk \
     --input-directory $DIR \
     --profile-actions-path filter_actions.jsonl \
