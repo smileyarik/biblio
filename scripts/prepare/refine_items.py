@@ -93,6 +93,7 @@ def main(
             "meta": {
                 "is_candidate": False,
                 "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
+                # TODO: add bbk
                 "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
                 "level": r.pop("biblevel"),
                 "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
@@ -139,6 +140,7 @@ def main(
                 "smart_collapse_field": smart_collapse_field,
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
+                "bbk": r.pop("bbk"),
                 "isbn": r.pop("isbn"),
                 "language": [language] if language else [],
                 "place": r.pop("place_name"),

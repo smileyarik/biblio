@@ -20,7 +20,7 @@ def set_single_feature_counter(profile, value, object_type):
         profile.counters.set(object_type, CT.HAS, RT.SUM, value, 1, 0)
 
 
-def make_item_profile(item):
+def make_item_profile(item, bbk_processor):
     item_profile = Profile(item["scf_id"], OT.ITEM)
 
     if author := item["author"]:
@@ -33,6 +33,10 @@ def make_item_profile(item):
         set_repeated_feature_counter(item_profile, serial, OT.SERIES)
     for language in meta.get("language", []):
         set_repeated_feature_counter(item_profile, language, OT.LANGUAGE)
+    if bbk_str := meta.get("bbk"):
+        for bbk in bbk_processor.parse_str(bbk_str):
+            for bbk_profix in bbk_processor.get_all_prefixes(bbk):
+                set_single_feature_counter(item_profile, bbk_prefix, OT.BBK_PREFIX)
 
     set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)
 
@@ -79,13 +83,17 @@ def main(
     target_actions_path,
     item_profiles_path,
     user_profiles_path,
-    make_for_all
+    make_for_all,
+    bbk_path
 ):
     item_profiles = dict()
     user_profiles = dict()
 
     target_user_ids = set()
     target_min_ts = int(1e10)
+
+    print("Init BBK Processor")
+    bbk_processor = BbkProcessor(bbk_path)
 
     print("Read target users")
     target_action_gen = read_jsonl(os.path.join(input_directory, target_actions_path))
@@ -101,7 +109,7 @@ def main(
         items[uniq_id] = merge_items(items.get(uniq_id, None), item)
 
     for uniq_id, item in tqdm(items.items()):
-        item_profiles[uniq_id] = make_item_profile(item)
+        item_profiles[uniq_id] = make_item_profile(item, bbk_processor)
 
     print("Read user data")
     user_gen = read_jsonl(os.path.join(input_directory, users_path))
@@ -134,6 +142,7 @@ def main(
             user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.AGE_RESTRICTION, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
             user_profile.counters.update_from(item_profile.counters, OT.LANGUAGE, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
+            user_profile.counters.update_from(item_profile.counters, OT.BBK_PREFIX, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
 
     print("Normalize item profiles")
     for _, item_profile in item_profiles.items():
@@ -182,6 +191,7 @@ if __name__ == "__main__":
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
     parser.add_argument('--make-for-all', action="store_true", default=False)
+    parser.add_argument('--bbk-path', type=str, default="ml/bbk_mapping.json")
     args = parser.parse_args()
     main(**vars(args))
 
