@@ -36,8 +36,7 @@ python3 -m ml.split_actions \
     --train-stat-path train_stat.jsonl \
     --train-target-path train_target.jsonl \
     --valid-stat-path valid_stat.jsonl \
-    --valid-target-path valid_target.jsonl \
-    --test-stat-path test_stat.jsonl
+    --valid-target-path valid_target.jsonl
 
 echo "==== Make profiles (train)"
 python3 -m ml.make_profiles \
