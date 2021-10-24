@@ -11,7 +11,7 @@ class OT(str, Enum):
     ITEM = "ITEM"
     USER = "USER"
     AUTHOR = "AUTHOR"
-    LIBRARY= "LIBRARY"
+    LIBRARY = "LIBRARY"
     RUBRIC = "RUBRIC"
     SERIES = "SERIES"
     AGE = "AGE"
@@ -19,6 +19,8 @@ class OT(str, Enum):
     AGE_RESTRICTION = "AGE_RESTRICTION"
     LANGUAGE = "LANGUAGE"
     READER_AGE = "READER_AGE"
+    BBK_PREFIX = "BBK_PREFIX"
+    KEYWORD = "KEYWORD"
 
 
 class CT(str, Enum):
@@ -67,7 +69,7 @@ class CounterKey:
 
 
 class Counter:
-    def __init__(self, value = 0, ts = 0):
+    def __init__(self, value=0, ts=0):
         self.value = value
         self.ts = ts
 

@@ -2,11 +2,12 @@ import argparse
 import os
 import string
 from itertools import chain
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from tqdm import tqdm
 
 from util import read_csv_files, write_jsonl, read_jsonl, read_json, merge_meta
+from prepare.tfidf import get_keywords, load_idfs
 
 
 def read_feature_to_id(
@@ -19,7 +20,7 @@ def read_feature_to_id(
         pattern=pattern,
         encoding="cp1251"
     )
-    return {a[feature] : int(a["id"]) for a in gen}
+    return {a[feature]: int(a["id"]) for a in gen}
 
 
 def process_biblio_feature(value, mapping):
@@ -52,8 +53,15 @@ def main(
     series_pattern,
     site_items_path,
     site_small_items_path,
+    idfs_path,
     output_path
 ):
+    word2idf = None
+    if idfs_path:
+        print("Reading IDFs...")
+        word2idf, word2idx = load_idfs(idfs_path)
+        print("... {} word loaded".format(len(word2idf)))
+
     print("Reading biblio/authors...")
     author_to_id = read_feature_to_id(input_directory, authors_pattern, "author")
     print("... {} biblio/authors read".format(len(author_to_id)))
@@ -74,7 +82,7 @@ def main(
     language_to_id = read_feature_to_id(input_directory, languages_pattern, "lan_short")
     print("... {} biblio/languages read".format(len(person_to_id)))
 
-    age_restriction_to_id = { "0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632 }
+    age_restriction_to_id = {"0+": 6630, "6+": 6634, "12+": 6633, "16+": 6631, "18+": 6632}
 
     print("Reading biblio/items...")
     items_gen = read_csv_files(
@@ -83,6 +91,7 @@ def main(
         encoding="cp1251"
     )
 
+    # TODO: Add BBK
     items = []
     for r in tqdm(items_gen):
         age_restriction = r.pop("ager")
@@ -94,14 +103,9 @@ def main(
                 "is_candidate": False,
                 "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
                 "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
-                "level": r.pop("biblevel"),
                 "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
-                "place": r.pop("place"),
-                "publisher": r.pop("publ"),
                 "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
-                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
-#                "type": r.pop("material"),
-                "year": r.pop("yea"),
+                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id)
             }
         }
         clean_meta(record)
@@ -139,18 +143,22 @@ def main(
                 "smart_collapse_field": smart_collapse_field,
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
-                "isbn": r.pop("isbn"),
+                "bbk": r.pop("bbk"),
                 "language": [language] if language else [],
-                "place": r.pop("place_name"),
-                "publisher": r.pop("publisher_name"),
                 "rubrics": [rubric] if rubric else [],
                 "series": [serial] if serial else [],
                 "type": r.pop("material_id"),
-                "year": r.pop("year_value"),
                 "libraries" : {int(r["libraryId"]) : r['totalOutCount']
                     for r in r.pop("libraryAvailability")} if 'libraryAvailability' in r else {},
             }
         }
+
+        annotation = record["meta"].pop("annotation", None)
+        if word2idf and annotation:
+            annotation = " ".join(annotation.split()[:200])
+            record["meta"]["keywords"] = get_keywords(annotation, word2idf, word2idx, k=5)
+            record["meta"]["keywords"] += get_keywords(record["title"], word2idf, word2idx, k=2)
+
         clean_meta(record)
         assert record["id"]
         if not record["title"]:
@@ -181,24 +189,6 @@ def main(
     items = {rid: item for rid, item in items.items() if item.get("scf_id")}
     print("... {} items read overall".format(len(items)))
 
-    print("Calculating uniq_id...")
-    buckets = defaultdict(list)
-    for _, item in items.items():
-        title = item["title"].lower()
-        author = ""
-        if item["author"] and "name" in item["author"]:
-            author = item["author"]["name"].lower()
-
-        orig_key = title + " " + author
-        key = orig_key.translate(str.maketrans('', '', string.punctuation))
-        key = key.replace(" ", "")
-        buckets[(key if len(key) >= 10 else orig_key)].append(item["id"])
-
-    for bucket_num, (_, bucket) in enumerate(buckets.items()):
-        for item_id in bucket:
-            items[item_id]["meta"]["uniq_id"] = bucket_num
-    print("... {} buckets".format(len(buckets)))
-
     print("Writing to {}...".format(output_path))
     items_plain = list(items.values())
     items_plain.sort(key=lambda x: (x["scf_id"], x["id"]))
@@ -216,6 +206,7 @@ if __name__ == "__main__":
     parser.add_argument('--series-pattern', type=str, default="series.csv")
     parser.add_argument('--site-items-path', type=str, default="all_books.jsonl")
     parser.add_argument('--site-small-items-path', type=str, default="items.json")
+    parser.add_argument('--idfs-path', type=str, default=None)
     parser.add_argument('--output-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

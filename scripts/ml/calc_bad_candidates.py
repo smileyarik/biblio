@@ -57,25 +57,25 @@ def main(
         rw_graph[record["user"]][record["item"]] = record["weight"]
 
     print("LSTM load")
-    lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
-    lstm_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(lstm_records):
-        lstm_graph[record["user"]][record["item"]] = record["weight"]
+    lstm_graph = None
+    if lstm_path:
+        lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
+        lstm_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(lstm_records):
+            lstm_graph[record["user"]][record["item"]] = record["weight"]
 
     print("Calc candidates")
     book_top = []
     for item_id, item in items.items():
         item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D7, '', start_ts))
         book_top.append((item_id, item_size))
-    book_top = sorted(book_top, key=lambda x:-x[1])
+    book_top = sorted(book_top, key=lambda x: -x[1])
 
-    aaa = 0
     bad_candidates_count = 0
     all_targets_found = 0
     for user_id in tqdm(target_users):
         targets_found = [0, 0, 0]
         count = 0
-        aaa += 1
         user_items = set()
         for item_id, _ in book_top[:poptop]:
             if item_id in filter_items[user_id] or item_id in user_items:
@@ -97,16 +97,16 @@ def main(
                 targets_found[1] += 1
 
         last_count = count
-        for item_id, value in lstm_graph.get(user_id, {}).items():
-            if item_id in filter_items[user_id] or item_id in user_items:
-                continue
-            if count == last_count + lstm_top_size:
-                break
-            count += 1
-            user_items.add(item_id)
-            if item_id in target_items[user_id]:
-                targets_found[2] += 1
-
+        if lstm_graph:
+            for item_id, value in lstm_graph.get(user_id, {}).items():
+                if item_id in filter_items[user_id] or item_id in user_items:
+                    continue
+                if count == last_count + lstm_top_size:
+                    break
+                count += 1
+                user_items.add(item_id)
+                if item_id in target_items[user_id]:
+                    targets_found[2] += 1
         tail_top = book_top[poptop:]
         for item_id, _ in tail_top:
             if count == items_per_group:
@@ -119,14 +119,12 @@ def main(
                 targets_found[0] += 1
 
         all_targets_found += sum(targets_found)
-        if aaa % 1000 == 1:
-            print(all_targets_found)
-
         if sum(targets_found) == 0:
             bad_candidates_count += 1
 
     print("Users with bad candidates: {}".format(bad_candidates_count))
     print("Targets found:", all_targets_found)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -139,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('--lstm-top-size', type=int, default=200)
     parser.add_argument('--items-per-group', type=int, default=600)
     parser.add_argument('--start-ts', type=int, required=True)
-    parser.add_argument('--rw-path', type=str, required=True)
-    parser.add_argument('--lstm-path', type=str, required=True)
+    parser.add_argument('--rw-path', type=str, default=None)
+    parser.add_argument('--lstm-path', type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

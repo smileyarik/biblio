@@ -28,6 +28,11 @@ def main(
     poptop = items_per_group - rw_top_size - lstm_top_size
     assert poptop >= 0
 
+    # in train mode features are calculated only for users:
+    # (a) mentioned in target actions
+    # (b) with at least one positive in generated candidated
+    train_mode = True
+
     print("Read user profiles")
     users = dict()
     with open(os.path.join(input_directory, user_profiles_path), "r") as r:
@@ -47,11 +52,17 @@ def main(
     print("Read target users")
     target_users = set()
     target_items = defaultdict(set)
-    target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
-    for action in tqdm(target_actions):
-        target_users.add(action["user_id"])
-        target_items[action["user_id"]].add(action["item_scf"])
-    print("...{} target users".format(len(target_users)))
+
+    if target_actions_path:
+        target_actions = read_jsonl(os.path.join(input_directory, target_actions_path))
+        for action in tqdm(target_actions):
+            target_users.add(action["user_id"])
+            target_items[action["user_id"]].add(action["item_scf"])
+        print("...{} target users".format(len(target_users)))
+    else:
+        target_users = set(users.keys())
+        train_mode = False
+        print("...omitted")
 
     print("Read already seen items")
     filter_items = defaultdict(set)
@@ -59,25 +70,28 @@ def main(
     for action in tqdm(stat_actions):
         filter_items[action["user_id"]].add(action["item_scf"])
 
-    print("Random walk load")
-    rw_records = read_jsonl(os.path.join(input_directory, rw_path))
-    rw_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(rw_records):
-        rw_graph[record["user"]][record["item"]] = record["weight"]
+    rw_graph = None
+    if rw_path:
+        print("Random walk load")
+        rw_records = read_jsonl(os.path.join(input_directory, rw_path))
+        rw_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(rw_records):
+            rw_graph[record["user"]][record["item"]] = record["weight"]
 
-    print("LSTM load")
-    lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
-    lstm_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(lstm_records):
-        lstm_graph[record["user"]][record["item"]] = record["weight"]
-
+    lstm_graph = None
+    if lstm_path:
+        print("LSTM load")
+        lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
+        lstm_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(lstm_records):
+            lstm_graph[record["user"]][record["item"]] = record["weight"]
 
     print("Calc candidates")
     book_top = []
     for item_id, item in items.items():
         item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
         book_top.append((item_id, item_size))
-    book_top = sorted(book_top, key=lambda x:-x[1])
+    book_top = sorted(book_top, key=lambda x: -x[1])
 
     print("Calc global stat")
     full_events = Counters()
@@ -88,7 +102,7 @@ def main(
     print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
 
     print("Calc features")
-    calcer = FeaturesCalcer(rw_graph, lstm_graph, full_events)
+    calcer = FeaturesCalcer(full_events, rw_graph, lstm_graph)
     features_output = open(os.path.join(input_directory, features_output_path), "w")
 
     bad_candidates_count = 0
@@ -102,26 +116,27 @@ def main(
 
         top = {item_id for item_id, _ in book_top[:poptop]}
 
-        current_size = len(top)
-        rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
-        rw_top.sort(key=lambda x: -x[1])
-        for item_id, _ in rw_top:
-            if len(top) >= current_size + rw_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
-                continue
-            top.add(item_id)
+        if rw_graph:
+            current_size = len(top)
+            rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
+            rw_top.sort(key=lambda x: -x[1])
+            for item_id, _ in rw_top:
+                if len(top) >= current_size + rw_top_size:
+                    break
+                if item_id in top or item_id in filter_items[user_id]:
+                    continue
+                top.add(item_id)
 
-        current_size = len(top)
-        lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
-        lstm_top.sort(key=lambda x: -x[1])
-        for item_id, _ in lstm_top:
-            if len(top) >= current_size + lstm_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
-                continue
-            top.add(item_id)
-
+        if lstm_graph:
+            current_size = len(top)
+            lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
+            lstm_top.sort(key=lambda x: -x[1])
+            for item_id, _ in lstm_top:
+                if len(top) >= current_size + lstm_top_size:
+                    break
+                if item_id in top or item_id in filter_items[user_id]:
+                    continue
+                top.add(item_id)
 
         tail_top = book_top[poptop:]
         for item_id, _ in tail_top:
@@ -131,11 +146,13 @@ def main(
                 continue
             top.add(item_id)
 
-        targets_found = len(top.intersection(target_items[user_id]))
-        all_found_target += targets_found
-        if targets_found == 0:
-            bad_candidates_count += 1
-            continue
+
+        if train_mode:
+            targets_found = len(top.intersection(target_items[user_id]))
+            all_found_target += targets_found
+            if targets_found == 0:
+                bad_candidates_count += 1
+                continue
 
         reduce_ts = user_last_ts if is_site_user(user_id) else start_ts
         top = list(sorted(top))
@@ -146,8 +163,10 @@ def main(
             features = '\t'.join([str(ff) for ff in features])
             features_output.write('%s\t%s\t%d\t%s\n' % (user_id, item_id, target, features))
     features_output.close()
-    print("Users with bad candidates: {}".format(bad_candidates_count))
-    print("Found target:", all_found_target)
+
+    if train_mode:
+        print("Users with bad candidates: {}".format(bad_candidates_count))
+        print("Found target:", all_found_target)
 
     cd = calcer.get_cd()
     with open(os.path.join(input_directory, cd_output_path), "w") as cd_out:
@@ -164,14 +183,14 @@ if __name__ == "__main__":
     parser.add_argument('--item-profiles-path', type=str, required=True)
     parser.add_argument('--user-profiles-path', type=str, required=True)
     parser.add_argument('--profile-actions-path', type=str, required=True)
-    parser.add_argument('--target-actions-path', type=str, required=True)
+    parser.add_argument('--target-actions-path', type=str, required=False)
     parser.add_argument('--rw-top-size', type=int, default=200)
     parser.add_argument('--lstm-top-size', type=int, default=200)
     parser.add_argument('--items-per-group', type=int, default=600)
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
-    parser.add_argument('--rw-path', type=str, required=True)
-    parser.add_argument('--lstm-path', type=str, required=True)
+    parser.add_argument('--rw-path', type=str, default=None)
+    parser.add_argument('--lstm-path', type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

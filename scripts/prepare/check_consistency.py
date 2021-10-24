@@ -1,7 +1,5 @@
 import argparse
 
-#import plotext as plt
-
 from tqdm import tqdm
 
 from util import read_jsonl
@@ -46,6 +44,7 @@ def main(items_path, users_path, actions_path):
     assert actions_count >= 10000
 
     print("ALL OK")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

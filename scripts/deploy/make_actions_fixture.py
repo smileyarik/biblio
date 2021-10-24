@@ -1,16 +1,18 @@
 import argparse
-from itertools import islice
-from datetime import datetime
+import os
 
+from datetime import datetime
+from itertools import islice
 from util import read_jsonl, write_jsonl
 
 
 def main(
-    input_path,
-    output_path,
+    input_directory,
+    actions_path,
+    fixture_path,
     nrows
 ):
-    actions = read_jsonl(input_path)
+    actions = read_jsonl(os.path.join(input_directory, actions_path))
     django_items = []
     for action in islice(actions, 0, nrows):
         if action["has_bad_user"] or action["has_bad_item"]:
@@ -28,15 +30,14 @@ def main(
         }
         django_items.append(django_item)
 
-    write_jsonl(output_path, django_items)
+    write_jsonl(os.path.join(input_directory, fixture_path), django_items)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_path', type=str)
-    parser.add_argument('output_path', type=str)
+    parser.add_argument('--input-directory', type=str, required=True)
+    parser.add_argument('--actions-path', type=str, required=True)
+    parser.add_argument('--fixture-path', type=str, required=True)
     parser.add_argument('--nrows', type=int, default=None)
-    args = parser.parse_args()
-    main(**vars(args))
     args = parser.parse_args()
     main(**vars(args))
