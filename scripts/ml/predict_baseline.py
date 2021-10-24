@@ -23,7 +23,8 @@ def calc_popular_baseline(
 ):
     top = []
     for item_id, item in items.items():
-        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 1633028400)) # 1 октября 2021 г., fix it
+        # 1 октября 2021 г., fix it
+        item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', 1633028400))
         top.append((item_id, item_size))
     top = sorted(top, key=lambda x: x[1], reverse=True)
 

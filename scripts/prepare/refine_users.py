@@ -12,7 +12,7 @@ def process_date(value):
     try:
         d = datetime.datetime.strptime(value, "%d.%m.%Y")
         return d.date().isoformat()
-    except:
+    except Exception:
         return None
 
 

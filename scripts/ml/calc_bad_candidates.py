@@ -67,15 +67,13 @@ def main(
     for item_id, item in items.items():
         item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D7, '', start_ts))
         book_top.append((item_id, item_size))
-    book_top = sorted(book_top, key=lambda x:-x[1])
+    book_top = sorted(book_top, key=lambda x: -x[1])
 
-    aaa = 0
     bad_candidates_count = 0
     all_targets_found = 0
     for user_id in tqdm(target_users):
         targets_found = [0, 0, 0]
         count = 0
-        aaa += 1
         for item_id, _ in book_top[:poptop]:
             if item_id in filter_items[user_id]:
                 continue
@@ -114,14 +112,12 @@ def main(
                 targets_found[0] += 1
 
         all_targets_found += sum(targets_found)
-        if aaa % 1000 == 1:
-            print(all_targets_found)
-
         if sum(targets_found) == 0:
             bad_candidates_count += 1
 
     print("Users with bad candidates: {}".format(bad_candidates_count))
     print("Targets found:", all_targets_found)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -7,8 +7,8 @@ from util import is_site_user, read_jsonl
 
 
 def precision_at(predictions, true_labels, k):
-    assert len(true_labels) > 0 # really need?
-    assert len(set(predictions)) == len(predictions) # dups protection
+    assert len(true_labels) > 0  # really need?
+    assert len(set(predictions)) == len(predictions)  # dups protection
     tp_seen = 0
     metric = 0
     for i, item_id in enumerate(predictions[:k]):
