@@ -24,22 +24,30 @@ class RecPredictView(views.APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({})
+            user_id = 0
+            user = User.objects.get(id=user_id)
 
         history_books = [(action.time, action.book_id) for action in Action.objects.filter(user__id=user_id)]
         history_books.sort(reverse=True)
         history_books_ids = [bid for _, bid in history_books]
+        history_books = Book.objects.filter(id__in=history_books_ids)
+        history_books = [{"id": book.book_id, "title": book.title, "author": book.author} for book in history_books]
 
         rec_books = [(rec.book_id, rec.score) for rec in Recommendation.objects.filter(user__id=user_id)]
         rec_books.sort(key=lambda x: x[1], reverse=True)
         rec_books_ids = [i for i, _ in rec_books]
-
-        history_books = Book.objects.filter(id__in=history_books_ids)
-        history_books = [{"id": book.book_id, "title": book.title, "author": book.author} for book in history_books]
+        rec_books_scores = {i: score for i, score in rec_books}
+        rec_books_ids = rec_books_ids[:5]
 
         rec_books = Book.objects.filter(id__in=rec_books_ids)
-        rec_books = [{"id": book.book_id, "title": book.title, "author": book.author} for book in rec_books]
-        rec_books = rec_books[:5]
+        rec_books = [{
+            "id": book.book_id,
+            "title": book.title,
+            "author": book.author,
+            "scf_id": book.id,
+            "score": rec_books_scores[book.id]
+        } for book in rec_books]
+        rec_books.sort(key=lambda x: x["score"], reverse=True)
 
         response = {
             "recommendations": rec_books,

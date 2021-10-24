@@ -19,7 +19,7 @@ def main(
     print("Read item profiles")
     items = dict()
     with open(os.path.join(input_directory, item_profiles_path), "r") as r:
-        for line in tqdm(r):
+        for i, line in tqdm(enumerate(r)):
             profile = Profile.loads(line)
             items[profile.object_id] = profile
     print("...{} items read".format(len(items)))
@@ -28,11 +28,14 @@ def main(
     book_top = []
     for item_id, item in items.items():
         item_size = float(item.counters.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
-        book_top.append((item_id, item_size))
+        rubrics = item.counters.slice(OT.RUBRIC, CT.HAS, RT.SUM)
+        if 479 in rubrics:
+            book_top.append((item_id, item_size))
     book_top = sorted(book_top, key=lambda x: -x[1])
     with open(os.path.join(input_directory, output_path), "w") as out:
         for item_id, item_size in book_top[0:5]:
             out.write('0\t%d\t0\t%d\n' % (item_id, item_size))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
