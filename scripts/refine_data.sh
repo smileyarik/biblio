@@ -11,8 +11,11 @@ fi
 
 mkdir -p $OUTPUT_DIR
 
+echo "-----idfs-----"
+python3 -m prepare.build_idfs --input-directory $INPUT_DIR --output-file "$OUTPUT_DIR/idfs.txt"
+
 echo "-----items-----"
-python3 -m prepare.refine_items --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/items.jsonl"
+python3 -m prepare.refine_items --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/items.jsonl" --idfs-path "$OUTPUT_DIR/idfs.txt"
 
 echo "-----users-----"
 python3 -m prepare.refine_users --input-directory $INPUT_DIR --output-path "$OUTPUT_DIR/users.jsonl"

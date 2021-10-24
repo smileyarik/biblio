@@ -9,7 +9,7 @@ from prepare.tfidf import tokenize_to_lemmas
 from util import read_jsonl
 
 
-def build_idf_vocabulary(texts, max_df=0.05, min_df=2):
+def build_idf_vocabulary(texts, max_df=0.05, min_df=3):
     print("Building TfidfVectorizer...")
     vectorizer = TfidfVectorizer(tokenizer=tokenize_to_lemmas, max_df=max_df, min_df=min_df)
     vectorizer.fit(texts)
@@ -51,7 +51,7 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-directory', type=str, required=True)
-    parser.add_argument('--all-books-path', type=str, required=True)
+    parser.add_argument('--all-books-path', type=str, default="all_books.jsonl")
     parser.add_argument('--output-file', type=str, required=True)
     parser.add_argument('--nrows', type=int, default=None)
     args = parser.parse_args()

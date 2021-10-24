@@ -19,6 +19,7 @@ class OT(str, Enum):
     AGE_RESTRICTION = "AGE_RESTRICTION"
     LANGUAGE = "LANGUAGE"
     READER_AGE = "READER_AGE"
+    KEYWORD = "KEYWORD"
 
 
 class CT(str, Enum):
