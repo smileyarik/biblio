@@ -118,11 +118,11 @@ def main(
     item_gen = read_jsonl(os.path.join(input_directory, items_path))
     items = dict()
     for item in tqdm(item_gen):
-        uniq_id = item["scf_id"]
-        items[uniq_id] = merge_items(items.get(uniq_id, None), item)
+        scf_id = item["scf_id"]
+        items[scf_id] = merge_items(items.get(scf_id, None), item)
 
-    for uniq_id, item in tqdm(items.items()):
-        item_profiles[uniq_id] = make_item_profile(item, bbk_processor)
+    for scf_id, item in tqdm(items.items()):
+        item_profiles[scf_id] = make_item_profile(item, bbk_processor)
     del items
 
     print("Read user data")
