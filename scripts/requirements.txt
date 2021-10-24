@@ -5,5 +5,5 @@ pymorphy2
 pyonmttok
 scipy
 sklearn==0.23.2
-tensorflow
+tensorflow>=2.0.0
 tqdm
