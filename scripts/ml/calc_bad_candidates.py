@@ -57,10 +57,12 @@ def main(
         rw_graph[record["user"]][record["item"]] = record["weight"]
 
     print("LSTM load")
-    lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
-    lstm_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(lstm_records):
-        lstm_graph[record["user"]][record["item"]] = record["weight"]
+    lstm_graph = None
+    if lstm_path:
+        lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
+        lstm_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(lstm_records):
+            lstm_graph[record["user"]][record["item"]] = record["weight"]
 
     print("Calc candidates")
     book_top = []
@@ -91,15 +93,16 @@ def main(
             if item_id in target_items[user_id]:
                 targets_found[1] += 1
 
-        last_count = count
-        for item_id, value in lstm_graph.get(user_id, {}).items():
-            if item_id in filter_items[user_id]:
-                continue
-            if count == last_count + lstm_top_size:
-                break
-            count += 1
-            if item_id in target_items[user_id]:
-                targets_found[2] += 1
+        if lstm_graph:
+            last_count = count
+            for item_id, value in lstm_graph.get(user_id, {}).items():
+                if item_id in filter_items[user_id]:
+                    continue
+                if count == last_count + lstm_top_size:
+                    break
+                count += 1
+                if item_id in target_items[user_id]:
+                    targets_found[2] += 1
 
         tail_top = book_top[poptop:]
         for item_id, _ in tail_top:
@@ -130,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument('--lstm-top-size', type=int, default=200)
     parser.add_argument('--items-per-group', type=int, default=600)
     parser.add_argument('--start-ts', type=int, required=True)
-    parser.add_argument('--rw-path', type=str, required=True)
-    parser.add_argument('--lstm-path', type=str, required=True)
+    parser.add_argument('--rw-path', type=str, default=None)
+    parser.add_argument('--lstm-path', type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

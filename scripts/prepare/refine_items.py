@@ -59,7 +59,7 @@ def main(
     word2idf = None
     if idfs_path:
         print("Reading IDFs...")
-        word2idf = load_idfs(idfs_path)
+        word2idf, word2idx = load_idfs(idfs_path)
         print("... {} word loaded".format(len(word2idf)))
 
     print("Reading biblio/authors...")
@@ -156,11 +156,12 @@ def main(
                 "year": r.pop("year_value"),
             }
         }
-        if word2idf:
-            annotation = record["meta"]["annotation"]
+
+        annotation = record["meta"].pop("annotation", None)
+        if word2idf and annotation:
             annotation = " ".join(annotation.split()[:200])
-            record["meta"]["keywords"] = get_keywords(annotation, word2idf, k=5)
-            record["meta"]["keywords"] += get_keywords(record["title"], word2idf, k=2)
+            record["meta"]["keywords"] = get_keywords(annotation, word2idf, word2idx, k=5)
+            record["meta"]["keywords"] += get_keywords(record["title"], word2idf, word2idx, k=2)
 
         clean_meta(record)
         assert record["id"]

@@ -3,8 +3,15 @@ import string
 import os
 
 import razdel
+import nltk
+from nltk.stem.snowball import SnowballStemmer
+from nltk.corpus import stopwords
 
 punct_translator = str.maketrans(string.punctuation, " " * len(string.punctuation))
+stemmer = SnowballStemmer("russian")
+
+nltk.download("stopwords")
+stopwords = set(stopwords.words("russian"))
 
 
 def tokenize_to_lemmas(text):
@@ -13,12 +20,14 @@ def tokenize_to_lemmas(text):
     text = text.translate(punct_translator)
     text = " ".join(text.split())
     tokens = [t.text for t in razdel.tokenize(text)]
+    tokens = [t for t in tokens if t not in stopwords]
+    tokens = [stemmer.stem(t) for t in tokens]
     tokens = [t for t in tokens if not t.isnumeric()]
     tokens = [t for t in tokens if len(t) >= 2]
     return tokens
 
 
-def get_keywords(text, word2idf, k=10):
+def get_keywords(text, word2idf, word2idx, k=10):
     if not text:
         return []
     tokens = tokenize_to_lemmas(text)
@@ -38,9 +47,10 @@ def get_keywords(text, word2idf, k=10):
 
 def load_idfs(file_name):
     assert os.path.exists(file_name)
-    word2idf = dict()
+    word2idf, word2idx = dict(), dict()
     with open(file_name, "r") as r:
-        for line in r:
+        for idx, line in enumerate(r):
             word, idf = line.strip().split("\t")
             word2idf[word] = float(idf)
-    return word2idf
+            word2idx[word] = int(idx)
+    return word2idf, word2idx

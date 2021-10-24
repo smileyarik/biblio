@@ -37,6 +37,8 @@ def make_item_profile(item):
         set_repeated_feature_counter(item_profile, serial, OT.SERIES)
     for language in meta.get("language", []):
         set_repeated_feature_counter(item_profile, language, OT.LANGUAGE)
+    for keyword in meta.get("keywords", []):
+        set_single_feature_counter(item_profile, keyword, OT.KEYWORD)
 
     set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)
 
@@ -62,14 +64,15 @@ def merge_items(item1, item2):
     meta1 = item1["meta"]
     meta2 = item2["meta"]
     assert item1["scf_id"] == item2["scf_id"]
-    merged_meta = merge_meta(meta1, meta2, ("rubrics", "series"))
+    merged_meta = merge_meta(meta1, meta2, ("rubrics", "series", "keywords"))
     item = {
         "author": item1["author"],
         "title": item1["title"],
         "scf_id": item1["scf_id"],
         "meta": {
             "rubrics": merged_meta["rubrics"],
-            "series": merged_meta["series"]
+            "series": merged_meta["series"],
+            "keywords": merged_meta["keywords"]
         }
     }
     return item
@@ -122,9 +125,10 @@ def main(
         item_profile = item_profiles[item_id]
 
         if user_birth_ts := user_profile.counters.get(OT.AGE, CT.VALUE, RT.SUM, '', 0):
-            assert ts >= user_birth_ts, "invalid user_birth_ts - {}: {}".format(user_id, user_birth_ts)
-            user_age_group = int(datetime.timedelta(seconds=ts-user_birth_ts).days // (READER_AGE_HISTOGRAM_BIN * 365))
-            item_profile.counters.add(OT.READER_AGE, CT.BOOKING, RT.SUM, str(user_age_group), 1, ts)
+            if ts > user_birth_ts:
+                user_age_days = datetime.timedelta(seconds=ts-user_birth_ts).days
+                user_age_group = int(user_age_days // (READER_AGE_HISTOGRAM_BIN * 365))
+                item_profile.counters.add(OT.READER_AGE, CT.BOOKING, RT.SUM, str(user_age_group), 1, ts)
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
             item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
@@ -132,17 +136,16 @@ def main(
                 continue
 
             user_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
-            user_profile.counters.update_from(item_profile.counters, OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.counters.update_from(item_profile.counters, OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.counters.update_from(item_profile.counters, OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts)
-            user_profile.counters.update_from(
-                item_profile.counters, OT.AGE_RESTRICTION,
-                CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts
-            )
-            user_profile.counters.update_from(
-                item_profile.counters, OT.LANGUAGE,
-                CT.HAS, RT.SUM, CT.BOOKING_BY, rt, ts
-            )
+
+            def update_from(from_ot, from_ct, from_rt, to_ct):
+                user_profile.counters.update_from(item_profile.counters, from_ot, from_ct, from_rt, to_ct, rt, ts)
+
+            update_from(OT.AUTHOR, CT.HAS, RT.SUM, CT.BOOKING_BY)
+            update_from(OT.RUBRIC, CT.HAS, RT.SUM, CT.BOOKING_BY)
+            update_from(OT.SERIES, CT.HAS, RT.SUM, CT.BOOKING_BY)
+            update_from(OT.KEYWORD, CT.HAS, RT.SUM, CT.BOOKING_BY)
+            update_from(OT.AGE_RESTRICTION, CT.HAS, RT.SUM, CT.BOOKING_BY)
+            update_from(OT.LANGUAGE, CT.HAS, RT.SUM, CT.BOOKING_BY)
 
     print("Normalize item profiles")
     for _, item_profile in item_profiles.items():

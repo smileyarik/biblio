@@ -96,8 +96,12 @@ def get_features_list(item, key):
 
 
 def get_uniq_features(features):
-    elems = {elem["id"]: elem for elem in features}
-    return list(elems.values())
+    if not features:
+        return list()
+    if isinstance(features[0], dict) and "id" in features[0]:
+        elems = {elem["id"]: elem for elem in features}
+        return list(elems.values())
+    return list(set(features))
 
 
 def merge_meta(meta1, meta2, keys):
