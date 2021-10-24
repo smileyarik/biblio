@@ -9,19 +9,26 @@ then
     exit 1
 fi
 
-echo "==== Filter actions"
-python3 -m ml.filter_site_actions \
+echo "==== Filter actions (all)"
+python3 -m ml.filter_actions \
     --input-directory $DIR \
     --actions-path actions.jsonl \
-    --site-actions-path site_actions.jsonl
+    --new-actions-path filter_actions.jsonl
 
 echo "==== Make profiles"
 python3 -m ml.make_profiles \
     --input-directory $DIR \
-    --profile-actions-path actions.jsonl \
+    --profile-actions-path filter_actions.jsonl \
     --make-for-site \
     --item-profiles-path final_item_profiles.jsonl \
     --user-profiles-path final_user_profiles.jsonl
+
+echo "==== Filter actions (site)"
+python3 -m ml.filter_actions \
+    --input-directory $DIR \
+    --actions-path actions.jsonl \
+    --new-actions-path site_actions.jsonl \
+    --site
 
 # TODO: add random_walk trained on full data
 

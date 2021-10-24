@@ -13,25 +13,27 @@ def write_record(f, record):
 def main(
     input_directory,
     actions_path,
-    site_actions_path
+    new_actions_path,
+    site
 ):
-    site_actions = open(os.path.join(input_directory, site_actions_path), "w")
+    new_actions = open(os.path.join(input_directory, new_actions_path), "w")
 
     actions = read_jsonl(os.path.join(input_directory, actions_path))
     for action in tqdm(actions):
-        if action["has_bad_item"]: # action with unknown item
+        if action["has_bad_item"] or action["has_bad_user"]:
             continue
-        if not is_site_user(action["user_id"]):
+        if site and not is_site_user(action["user_id"]):
             continue
-        write_record(site_actions, action)
+        write_record(new_actions, action)
 
-    site_actions.close()
+    new_actions.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input-directory', type=str, required=True)
     parser.add_argument('--actions-path', type=str, required=True)
-    parser.add_argument('--site-actions-path', type=str, required=True)
+    parser.add_argument('--new-actions-path', type=str, required=True)
+    parser.add_argument('--site', action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))
