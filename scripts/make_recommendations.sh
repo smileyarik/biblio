@@ -48,8 +48,8 @@ python3 -m ml.make_features \
 echo "==== Predict catboost"
 python3 -m ml.predict_catboost \
     --input-directory $DIR \
-    --features-path final_features.tsv
-    --cd-path final_cd.tsv
+    --features-path final_features.tsv \
+    --cd-path final_cd.tsv \
     --model-path model.bin \
     --output-path final_predictions.tsv
 
