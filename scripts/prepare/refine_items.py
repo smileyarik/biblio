@@ -91,6 +91,7 @@ def main(
         encoding="cp1251"
     )
 
+    # TODO: Add BBK
     items = []
     for r in tqdm(items_gen):
         age_restriction = r.pop("ager")
@@ -101,15 +102,10 @@ def main(
             "meta": {
                 "is_candidate": False,
                 "age_restriction": age_restriction_to_id[age_restriction] if age_restriction else None,
-                # TODO: add bbk
                 "language": process_biblio_features(r.pop("lan"), " , ", language_to_id),
-                "level": r.pop("biblevel"),
                 "persons": process_biblio_features(r.pop("person"), " , ", person_to_id),
-                "place": r.pop("place"),
-                "publisher": r.pop("publ"),
                 "rubrics": process_biblio_features(r.pop("rubrics"), " : ", rubric_to_id),
-                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id),
-                "year": r.pop("yea"),
+                "series": process_biblio_features(r.pop("serial"), " : ", serial_to_id)
             }
         }
         clean_meta(record)
@@ -148,14 +144,10 @@ def main(
                 "age_restriction": r.pop("ageRestriction_id"),
                 "annotation": r.pop("annotation"),
                 "bbk": r.pop("bbk"),
-                "isbn": r.pop("isbn"),
                 "language": [language] if language else [],
-                "place": r.pop("place_name"),
-                "publisher": r.pop("publisher_name"),
                 "rubrics": [rubric] if rubric else [],
                 "series": [serial] if serial else [],
-                "type": r.pop("material_id"),
-                "year": r.pop("year_value"),
+                "type": r.pop("material_id")
             }
         }
 
@@ -194,24 +186,6 @@ def main(
 
     items = {rid: item for rid, item in items.items() if item.get("scf_id")}
     print("... {} items read overall".format(len(items)))
-
-    print("Calculating uniq_id...")
-    buckets = defaultdict(list)
-    for _, item in items.items():
-        title = item["title"].lower()
-        author = ""
-        if item["author"] and "name" in item["author"]:
-            author = item["author"]["name"].lower()
-
-        orig_key = title + " " + author
-        key = orig_key.translate(str.maketrans('', '', string.punctuation))
-        key = key.replace(" ", "")
-        buckets[(key if len(key) >= 10 else orig_key)].append(item["id"])
-
-    for bucket_num, (_, bucket) in enumerate(buckets.items()):
-        for item_id in bucket:
-            items[item_id]["meta"]["uniq_id"] = bucket_num
-    print("... {} buckets".format(len(buckets)))
 
     print("Writing to {}...".format(output_path))
     items_plain = list(items.values())
