@@ -104,12 +104,7 @@ def main(
 ):
     item_profiles = dict()
     user_profiles = dict()
-
     target_user_ids = set()
-    def _is_target_user(user_id):
-        if make_for_site:
-            return is_site_user(user_id)
-        return not target_user_ids or user_id in target_user_ids
 
     print("Init BBK Processor")
     bbk_processor = BbkProcessor(bbk_path)
@@ -121,6 +116,11 @@ def main(
             target_user_ids.add(action["user_id"])
     else:
         print("... omitted")
+
+    def _is_target_user(user_id):
+        if make_for_site:
+            return is_site_user(user_id)
+        return not target_user_ids or user_id in target_user_ids
 
     print("Read books data")
     item_gen = read_jsonl(os.path.join(input_directory, items_path))
@@ -160,7 +160,7 @@ def main(
             item_profile.counters.add(OT.GLOBAL, CT.BOOKING, rt, '', 1, ts)
             if library != None:
                 item_profile.counters.add(OT.LIBRARY, CT.BOOKING, rt, library, 1, ts)
-            if _is_target_user(user_id):
+            if not _is_target_user(user_id):
                 continue
 
             if library != None:
