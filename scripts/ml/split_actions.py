@@ -25,15 +25,13 @@ def main(
     train_stat_path,
     train_target_path,
     valid_stat_path,
-    valid_target_path,
-    test_stat_path
+    valid_target_path
 ):
     actions = read_jsonl(os.path.join(input_directory, actions_path))
     train_stat = open(os.path.join(input_directory, train_stat_path), "w")
     train_target = open(os.path.join(input_directory, train_target_path), "w")
     valid_stat = open(os.path.join(input_directory, valid_stat_path), "w")
     valid_target = open(os.path.join(input_directory, valid_target_path), "w")
-    test_stat = open(os.path.join(input_directory, test_stat_path), "w")
 
     site_user_actions = defaultdict(list)
 
@@ -45,7 +43,6 @@ def main(
         if is_site_user(user_id):
             site_user_actions[user_id].append(action)
             continue
-        write_record(test_stat, action)
         if ts < start_train_ts:
             write_record(train_stat, action)
             write_record(valid_stat, action)
@@ -68,7 +65,6 @@ def main(
     train_target.close()
     valid_stat.close()
     valid_target.close()
-    test_stat.close()
 
 
 if __name__ == "__main__":
@@ -83,6 +79,5 @@ if __name__ == "__main__":
     parser.add_argument('--finish-valid-ts', type=int, required=True)
     parser.add_argument('--valid-stat-path', type=str, required=True)
     parser.add_argument('--valid-target-path', type=str, required=True)
-    parser.add_argument('--test-stat-path', type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))
