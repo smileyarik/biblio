@@ -6,6 +6,7 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
+from ml.bbk_processor import BbkProcessor
 from ml.profiles import OT, CT, RT, Profile, ONE_DAY_SECONDS
 from util import read_jsonl, merge_meta
 
@@ -35,7 +36,7 @@ def make_item_profile(item, bbk_processor):
         set_repeated_feature_counter(item_profile, language, OT.LANGUAGE)
     if bbk_str := meta.get("bbk"):
         for bbk in bbk_processor.parse_str(bbk_str):
-            for bbk_profix in bbk_processor.get_all_prefixes(bbk):
+            for bbk_prefix in bbk_processor.get_all_prefixes(bbk):
                 set_single_feature_counter(item_profile, bbk_prefix, OT.BBK_PREFIX)
 
     set_single_feature_counter(item_profile, meta.get("age_restriction"), OT.AGE_RESTRICTION)

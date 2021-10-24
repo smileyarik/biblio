@@ -13,7 +13,7 @@ class BbkProcessor():
             self.mapping.update({ target : target })
             self.mapping.update({ source : target for source in sources })
 
-        normalized_bbks = map(BbkProcessor.normalize_bbk, self.keys())
+        normalized_bbks = map(BbkProcessor.normalize_bbk, self.mapping.keys())
         self.trie = pygtrie.CharTrie.fromkeys(normalized_bbks)
 
     @staticmethod
@@ -23,7 +23,7 @@ class BbkProcessor():
 
     def get_all_prefixes(self, bbk):
         normalized_bbk = BbkProcessor.normalize_bbk(bbk)
-        return [prefix for prefix, _ in self.trie(normalized_bbk)]
+        return [prefix for prefix, _ in self.trie.prefixes(normalized_bbk)]
 
     def parse_str(self, value):
         bbks = []
