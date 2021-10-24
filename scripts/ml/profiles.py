@@ -11,7 +11,6 @@ class OT(str, Enum):
     ITEM = "ITEM"
     USER = "USER"
     AUTHOR = "AUTHOR"
-    LIBRARY = "LIBRARY"
     RUBRIC = "RUBRIC"
     SERIES = "SERIES"
     AGE = "AGE"

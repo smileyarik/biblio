@@ -17,13 +17,15 @@ def main(
     target_actions_path,
     rw_top_size,
     lstm_top_size,
+    als_top_size,
     items_per_group,
     start_ts,
     profile_actions_path,
     features_output_path,
     cd_output_path,
     rw_path,
-    lstm_path
+    lstm_path,
+    als_path
 ):
     poptop = items_per_group - rw_top_size - lstm_top_size
     assert poptop >= 0
@@ -78,13 +80,21 @@ def main(
         for record in tqdm(rw_records):
             rw_graph[record["user"]][record["item"]] = record["weight"]
 
-    lstm_graph = None
+    lstm_predictions = None
     if lstm_path:
         print("LSTM load")
         lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
-        lstm_graph = defaultdict(lambda: defaultdict(float))
+        lstm_predictions = defaultdict(lambda: defaultdict(float))
         for record in tqdm(lstm_records):
-            lstm_graph[record["user"]][record["item"]] = record["weight"]
+            lstm_predictions[record["user"]][record["item"]] = record["weight"]
+
+    als_predictions = None
+    if als_path:
+        print("ALS load")
+        als_records = read_jsonl(os.path.join(input_directory, als_path))
+        als_predictions = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(als_records):
+            als_predictions[record["user"]][record["item"]] = record["weight"]
 
     print("Calc candidates")
     book_top = []
@@ -102,7 +112,7 @@ def main(
     print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
 
     print("Calc features")
-    calcer = FeaturesCalcer(full_events, rw_graph, lstm_graph)
+    calcer = FeaturesCalcer(full_events, rw_graph, lstm_predictions, als_predictions)
     features_output = open(os.path.join(input_directory, features_output_path), "w")
 
     bad_candidates_count = 0
@@ -127,12 +137,23 @@ def main(
                     continue
                 top.add(item_id)
 
-        if lstm_graph:
+        if lstm_predictions:
             current_size = len(top)
-            lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
+            lstm_top = [(item_id, value) for item_id, value in lstm_predictions.get(user_id, {}).items()]
             lstm_top.sort(key=lambda x: -x[1])
             for item_id, _ in lstm_top:
                 if len(top) >= current_size + lstm_top_size:
+                    break
+                if item_id in top or item_id in filter_items[user_id]:
+                    continue
+                top.add(item_id)
+
+        if als_predictions:
+            current_size = len(top)
+            als_top = [(item_id, value) for item_id, value in als_predictions.get(user_id, {}).items()]
+            als_top.sort(key=lambda x: -x[1])
+            for item_id, _ in als_top:
+                if len(top) >= current_size + als_top_size:
                     break
                 if item_id in top or item_id in filter_items[user_id]:
                     continue
@@ -186,11 +207,13 @@ if __name__ == "__main__":
     parser.add_argument('--target-actions-path', type=str, required=False)
     parser.add_argument('--rw-top-size', type=int, default=200)
     parser.add_argument('--lstm-top-size', type=int, default=200)
-    parser.add_argument('--items-per-group', type=int, default=600)
+    parser.add_argument('--als-top-size', type=int, default=200)
+    parser.add_argument('--items-per-group', type=int, default=800)
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
     parser.add_argument('--rw-path', type=str, default=None)
     parser.add_argument('--lstm-path', type=str, default=None)
+    parser.add_argument('--als-path', type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

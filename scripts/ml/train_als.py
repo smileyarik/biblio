@@ -41,14 +41,14 @@ def read_matrix(actions):
 
 def main(
     input_directory,
-    train_actions_path,
+    profile_actions_path,
     output_dataset_path,
     output_model_path,
     num_threads,
     hidden_dim,
     epochs
 ):
-    train_actions = read_jsonl(os.path.join(input_directory, train_actions_path))
+    train_actions = read_jsonl(os.path.join(input_directory, profile_actions_path))
     dataset, dataset_actions = read_matrix(train_actions)
     with open(os.path.join(input_directory, output_dataset_path), "wb") as f:
         pickle.dump(dataset, f)
@@ -62,7 +62,7 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-directory", type=str, required=True)
-    parser.add_argument("--train-actions-path", type=str, required=True)
+    parser.add_argument("--profile-actions-path", type=str, required=True)
     parser.add_argument("--output-dataset-path", type=str, required=True)
     parser.add_argument("--output-model-path", type=str, required=True)
     parser.add_argument("--num-threads", type=int, default=4)

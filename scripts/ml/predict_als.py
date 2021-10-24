@@ -1,5 +1,6 @@
 import argparse
 import os
+import json
 import pickle
 
 from lightfm import LightFM
@@ -52,7 +53,8 @@ def main(
                 reverse_item_mapping, num_threads=num_threads
             )
             for i, (item_id, score) in enumerate(items):
-                w.write("{}\t{}\t{}\t{}\n".format(user_id, item_id, 0, score))
+                r = {"user": int(user_id), "item": int(item_id), "weight": float(score)}
+                w.write(json.dumps(r, ensure_ascii=False).strip() + "\n")
 
 
 if __name__ == "__main__":
