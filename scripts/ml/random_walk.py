@@ -23,6 +23,8 @@ def main(
     target_action_gen = read_jsonl(os.path.join(input_directory, target_actions_path))
     for action in tqdm(target_action_gen):
         target_user_ids.add(action["user_id"])
+    target_user_ids = list(target_user_ids)
+    print("...{} target users".format(len(target_user_ids)))
 
     print("Parsing transactions")
     user_links = defaultdict(set)
@@ -35,10 +37,12 @@ def main(
         if ts >= start_ts:
             user_links[user_id].add(item_id)
             item_links[item_id].add(user_id)
+    print("...{} users in user_links".format(len(user_links)))
+    print("...{} items in item_links".format(len(item_links)))
 
     print("Calulating random walk...")
     graph = defaultdict(lambda: defaultdict(float))
-    for user1 in tqdm(list(target_user_ids)):
+    for user1 in tqdm(target_user_ids):
         user2user = defaultdict(float)
         user1_items = user_links[user1]
         for item_id in user1_items:
@@ -59,7 +63,7 @@ def main(
         for i, (item_id, weight) in enumerate(user1_new_items):
             if i >= top_k:
                 break
-            graph[user_id][item_id] = weight
+            graph[user1][item_id] = weight
 
     print("Dumping graph")
     with open(os.path.join(input_directory, output_path), "w") as fw:
