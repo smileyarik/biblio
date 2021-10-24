@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="$1"
-FULL_TRAIN=1
+FULL_TRAIN=0
 
 if [ $FULL_TRAIN == 1 ]; then
     TRAIN_RW_TS=1613520000
@@ -83,9 +83,7 @@ python3 -m ml.make_features \
     --features-output-path train_features.tsv \
     --cd-output-path train_cd.tsv \
     --rw-path train_random_walk.jsonl \
-    --lstm-path train_lstm.jsonl \
     --rw-top-size 200 \
-    --lstm-top-size 200 \
     --items-per-group 600
 
 echo "==== Make features (valid)"
@@ -99,9 +97,7 @@ python3 -m ml.make_features \
     --features-output-path valid_features.tsv \
     --cd-output-path valid_cd.tsv \
     --rw-path valid_random_walk.jsonl \
-    --lstm-path valid_lstm.jsonl \
     --rw-top-size 200 \
-    --lstm-top-size 200 \
     --items-per-group 600
 
 echo "==== Train catboost"
