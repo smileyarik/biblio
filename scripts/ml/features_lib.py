@@ -64,7 +64,6 @@ class FeaturesCalcer:
             f.append(self.lstm_graph.get(user.object_id, {}).get(item.object_id, 0.0))
         for rt in [RT.SUM, RT.D7, RT.D30]:
             f.append(counter_cos(ucnt, icnt, OT.AUTHOR, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
-            f.append(counter_cos(ucnt, icnt, OT.LIBRARY, CT.BOOKING, CT.BOOKING, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.RUBRIC, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.SERIES, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.KEYWORD, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
@@ -86,7 +85,6 @@ class FeaturesCalcer:
             cd.add('lstm_score')
         for rt in [RT.SUM, RT.D7, RT.D30]:
             cd.add('author_cos_rt_' + rt)
-            cd.add('library_cos_rt_' + rt)
             cd.add('rubric_cos_rt_' + rt)
             cd.add('series_cos_rt_' + rt)
             cd.add('keyword_cos_rt_' + rt)
