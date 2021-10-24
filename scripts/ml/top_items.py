@@ -32,7 +32,7 @@ def main(
     book_top = sorted(book_top, key=lambda x: -x[1])
     with open(os.path.join(input_directory, output_path), "w") as out:
         for item_id, item_size in book_top[0:5]:
-            out.write('%d\n' % item_id)
+            out.write('0\t%d\t0\t%d\n' % (item_id, item_size))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
