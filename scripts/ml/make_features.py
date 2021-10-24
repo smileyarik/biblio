@@ -59,17 +59,21 @@ def main(
     for action in tqdm(stat_actions):
         filter_items[action["user_id"]].add(action["item_scf"])
 
-    print("Random walk load")
-    rw_records = read_jsonl(os.path.join(input_directory, rw_path))
-    rw_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(rw_records):
-        rw_graph[record["user"]][record["item"]] = record["weight"]
+    rw_graph = None
+    if rw_path:
+        print("Random walk load")
+        rw_records = read_jsonl(os.path.join(input_directory, rw_path))
+        rw_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(rw_records):
+            rw_graph[record["user"]][record["item"]] = record["weight"]
 
-    print("LSTM load")
-    lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
-    lstm_graph = defaultdict(lambda: defaultdict(float))
-    for record in tqdm(lstm_records):
-        lstm_graph[record["user"]][record["item"]] = record["weight"]
+    lstm_graph = None
+    if lstm_path:
+        print("LSTM load")
+        lstm_records = read_jsonl(os.path.join(input_directory, lstm_path))
+        lstm_graph = defaultdict(lambda: defaultdict(float))
+        for record in tqdm(lstm_records):
+            lstm_graph[record["user"]][record["item"]] = record["weight"]
 
 
     print("Calc candidates")
@@ -88,7 +92,7 @@ def main(
     print('All bookings 30d:', full_events.get(OT.GLOBAL, CT.BOOKING, RT.D30, '', start_ts))
 
     print("Calc features")
-    calcer = FeaturesCalcer(rw_graph, lstm_graph, full_events)
+    calcer = FeaturesCalcer(full_events, rw_graph, lstm_graph)
     features_output = open(os.path.join(input_directory, features_output_path), "w")
 
     bad_candidates_count = 0
@@ -102,26 +106,27 @@ def main(
 
         top = {item_id for item_id, _ in book_top[:poptop]}
 
-        current_size = len(top)
-        rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
-        rw_top.sort(key=lambda x: -x[1])
-        for item_id, _ in rw_top:
-            if len(top) >= current_size + rw_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
-                continue
-            top.add(item_id)
+        if rw_graph:
+            current_size = len(top)
+            rw_top = [(item_id, value) for item_id, value in rw_graph.get(user_id, {}).items()]
+            rw_top.sort(key=lambda x: -x[1])
+            for item_id, _ in rw_top:
+                if len(top) >= current_size + rw_top_size:
+                    break
+                if item_id in top or item_id in filter_items[user_id]:
+                    continue
+                top.add(item_id)
 
-        current_size = len(top)
-        lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
-        lstm_top.sort(key=lambda x: -x[1])
-        for item_id, _ in lstm_top:
-            if len(top) >= current_size + lstm_top_size:
-                break
-            if item_id in top or item_id in filter_items[user_id]:
-                continue
-            top.add(item_id)
-
+        if lstm_graph:
+            current_size = len(top)
+            lstm_top = [(item_id, value) for item_id, value in lstm_graph.get(user_id, {}).items()]
+            lstm_top.sort(key=lambda x: -x[1])
+            for item_id, _ in lstm_top:
+                if len(top) >= current_size + lstm_top_size:
+                    break
+                if item_id in top or item_id in filter_items[user_id]:
+                    continue
+                top.add(item_id)
 
         tail_top = book_top[poptop:]
         for item_id, _ in tail_top:
@@ -171,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument('--start-ts', type=int, required=True)
     parser.add_argument('--features-output-path', type=str, required=True)
     parser.add_argument('--cd-output-path', type=str, required=True)
-    parser.add_argument('--rw-path', type=str, required=True)
-    parser.add_argument('--lstm-path', type=str, required=True)
+    parser.add_argument('--rw-path', type=str, default=None)
+    parser.add_argument('--lstm-path', type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

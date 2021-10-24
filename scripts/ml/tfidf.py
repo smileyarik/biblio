@@ -15,8 +15,8 @@ def tokenize_to_lemmas(text):
     tokens, _ = tokenizer.tokenize(text)
     tokens = [t for t in tokens if t not in string.punctuation]
     tokens = [t for t in tokens if not t.isnumeric()]
-    tokens = [t for t in tokens if len(t) >= 2]
     tokens = [morph.parse(token)[0].normal_form for token in tokens]
+    tokens = [t for t in tokens if len(t) >= 2]
     return tokens
 
 

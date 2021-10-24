@@ -48,18 +48,20 @@ class ColumnDescription:
 
 
 class FeaturesCalcer:
-    def __init__(self, rw_graph, lstm_graph, full_events):
+    def __init__(self, full_events, rw_graph=None, lstm_graph=None):
+        self.full_events = full_events
         self.rw_graph = rw_graph
         self.lstm_graph = lstm_graph
-        self.full_events = full_events
 
     def __call__(self, user, item, ts):
         ucnt = user.counters
         icnt = item.counters
 
         f = list()
-        f.append(self.rw_graph.get(user.object_id, {}).get(item.object_id, 0.0))
-        f.append(self.lstm_graph.get(user.object_id, {}).get(item.object_id, 0.0))
+        if self.rw_graph:
+            f.append(self.rw_graph.get(user.object_id, {}).get(item.object_id, 0.0))
+        if self.lstm_graph:
+            f.append(self.lstm_graph.get(user.object_id, {}).get(item.object_id, 0.0))
         for rt in [RT.SUM, RT.D7, RT.D30]:
             f.append(counter_cos(ucnt, icnt, OT.AUTHOR, CT.BOOKING_BY, CT.HAS, rt, RT.SUM, ts))
             f.append(counter_cos(ucnt, icnt, OT.LIBRARY, CT.BOOKING, CT.BOOKING, rt, RT.SUM, ts))
@@ -76,8 +78,10 @@ class FeaturesCalcer:
 
     def get_cd(self):
         cd = ColumnDescription()
-        cd.add('random_walk')
-        cd.add('lstm_score')
+        if self.rw_graph:
+            cd.add('random_walk')
+        if self.lstm_graph:
+            cd.add('lstm_score')
         for rt in [RT.SUM, RT.D7, RT.D30]:
             cd.add('author_cos_rt_' + rt)
             cd.add('library_cos_rt_' + rt)

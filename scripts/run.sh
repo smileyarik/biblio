@@ -4,17 +4,17 @@ DIR="$1"
 FULL_TRAIN=1
 
 if [ $FULL_TRAIN == 1 ]; then
-    TRAIN_PAGERANK_TS=1613520000
+    TRAIN_RW_TS=1613520000
     TRAIN_START_TS=1629158400
     TRAIN_FINISH_TS=1629763200
-    VALID_PAGERANK_TS=1614124800
+    VALID_RW_TS=1614124800
     VALID_START_TS=1629763200
     VALID_FINISH_TS=1630368000
 else
-    TRAIN_PAGERANK_TS=1569542400
+    TRAIN_RW_TS=1569542400
     TRAIN_START_TS=1569888000
     TRAIN_FINISH_TS=1570060800
-    VALID_PAGERANK_TS=1569888000
+    VALID_RW_TS=1569888000
     VALID_START_TS=1570060800
     VALID_FINISH_TS=1570233600
 fi
@@ -61,8 +61,8 @@ python3 -m ml.random_walk \
     --profile-actions-path train_stat.jsonl \
     --target-actions-path train_target.jsonl \
     --output-path train_random_walk.jsonl \
-    --start-ts $TRAIN_PAGERANK_TS \
-    --probability 1.0
+    --start-ts $TRAIN_RW_TS \
+    --top-k 1000
 
 echo "==== Random walk (valid)"
 python3 -m ml.random_walk \
@@ -70,8 +70,8 @@ python3 -m ml.random_walk \
     --profile-actions-path valid_stat.jsonl \
     --target-actions-path valid_target.jsonl \
     --output-path valid_random_walk.jsonl \
-    --start-ts $VALID_PAGERANK_TS \
-    --probability 1.0
+    --start-ts $VALID_RW_TS \
+    --top-k 1000
 
 echo "==== LSTM (train)"
 python3 -m ml.lstm \
