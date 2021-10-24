@@ -1,3 +1,8 @@
+### Install requirements
+```
+pip install -r requirements.txt
+```
+
 ### Download and refine data
 ```
 bash +x download_data.sh ../../data

@@ -1,0 +1,9 @@
+catboost
+lightfm
+numpy
+pymorphy2
+pyonmttok
+scipy
+sklearn
+tensorflow
+tqdm
