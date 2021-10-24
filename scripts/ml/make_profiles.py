@@ -110,6 +110,7 @@ def main(
 
     for uniq_id, item in tqdm(items.items()):
         item_profiles[uniq_id] = make_item_profile(item, bbk_processor)
+    del items
 
     print("Read user data")
     user_gen = read_jsonl(os.path.join(input_directory, users_path))
@@ -162,6 +163,8 @@ def main(
         user_profile = user_profiles[user_id]
         item_profile = item_profiles[item_id]
 
+        if user_id not in target_user_ids and not make_for_all:
+            continue
         for rt in [RT.SUM, RT.D7, RT.D30]:
             user_profile.counters.update_from(item_profile.counters, OT.READER_AGE, CT.BOOKING, RT.SUM, CT.BOOKING_BY, rt, ts)
 

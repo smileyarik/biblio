@@ -4,17 +4,17 @@ DIR="$1"
 FULL_TRAIN=1
 
 if [ $FULL_TRAIN == 1 ]; then
-    TRAIN_PAGERANK_TS=1613520000
+    TRAIN_RW_TS=1613520000
     TRAIN_START_TS=1629158400
     TRAIN_FINISH_TS=1629763200
-    VALID_PAGERANK_TS=1614124800
+    VALID_RW_TS=1614124800
     VALID_START_TS=1629763200
     VALID_FINISH_TS=1630368000
 else
-    TRAIN_PAGERANK_TS=1569542400
+    TRAIN_RW_TS=1569542400
     TRAIN_START_TS=1569888000
     TRAIN_FINISH_TS=1570060800
-    VALID_PAGERANK_TS=1569888000
+    VALID_RW_TS=1569888000
     VALID_START_TS=1570060800
     VALID_FINISH_TS=1570233600
 fi
@@ -61,8 +61,8 @@ python3 -m ml.random_walk \
     --profile-actions-path train_stat.jsonl \
     --target-actions-path train_target.jsonl \
     --output-path train_random_walk.jsonl \
-    --start-ts $TRAIN_PAGERANK_TS \
-    --probability 0.1
+    --start-ts $TRAIN_RW_TS \
+    --top-k 1000
 
 echo "==== Random walk (valid)"
 python3 -m ml.random_walk \
@@ -70,8 +70,26 @@ python3 -m ml.random_walk \
     --profile-actions-path valid_stat.jsonl \
     --target-actions-path valid_target.jsonl \
     --output-path valid_random_walk.jsonl \
-    --start-ts $VALID_PAGERANK_TS \
-    --probability 0.1
+    --start-ts $VALID_RW_TS \
+    --top-k 1000
+
+echo "==== LSTM (train)"
+python3 -m ml.lstm \
+    --input-directory $DIR \
+    --profile-actions-path train_stat.jsonl \
+    --target-actions-path train_target.jsonl \
+    --checkpoint-path train_lstm_checkpoint \
+    --output-path train_lstm.jsonl \
+    --current-ts $TRAIN_FINISH_TS
+
+echo "==== LSTM (valid)"
+python3 -m ml.lstm \
+    --input-directory $DIR \
+    --profile-actions-path valid_stat.jsonl \
+    --target-actions-path valid_target.jsonl \
+    --checkpoint-path valid_lstm_checkpoint \
+    --output-path valid_lstm.jsonl \
+    --current-ts $VALID_FINISH_TS
 
 echo "==== Make features (train)"
 python3 -m ml.make_features \
@@ -83,7 +101,11 @@ python3 -m ml.make_features \
     --start-ts $TRAIN_START_TS \
     --features-output-path train_features.tsv \
     --cd-output-path train_cd.tsv \
-    --rw-path train_random_walk.jsonl
+    --rw-path train_random_walk.jsonl \
+    --lstm-path train_lstm.jsonl \
+    --rw-top-size 200 \
+    --lstm-top-size 200 \
+    --items-per-group 600
 
 echo "==== Make features (valid)"
 python3 -m ml.make_features \
@@ -95,7 +117,11 @@ python3 -m ml.make_features \
     --start-ts $VALID_START_TS \
     --features-output-path valid_features.tsv \
     --cd-output-path valid_cd.tsv \
-    --rw-path valid_random_walk.jsonl
+    --rw-path valid_random_walk.jsonl \
+    --lstm-path valid_lstm.jsonl \
+    --rw-top-size 200 \
+    --lstm-top-size 200 \
+    --items-per-group 600
 
 echo "==== Train catboost"
 python3 -m ml.train_catboost \
