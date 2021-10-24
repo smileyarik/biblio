@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from tqdm import tqdm
 from util import read_jsonl, write_jsonl
 
 
@@ -14,7 +15,7 @@ def main(
     with open(os.path.join(input_directory, predictions_path)) as r:
         for line in tqdm(r):
             user_id, item_id, _, score = line.strip().split("\t")
-            predictions.append((int(user_id), int(item_id), float(score))
+            predictions.append((int(user_id), int(item_id), float(score)))
 
     django_items = []
     for i, (user_id, item_id, score) in enumerate(predictions):
