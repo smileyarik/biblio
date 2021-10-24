@@ -20,7 +20,7 @@ def main(
     django_items = []
     for i, (user_id, item_id, score) in enumerate(predictions):
         django_item = {
-            "model": "recsys.prediction",
+            "model": "recsys.recommendation",
             "pk": i,
             "fields": {
                 "id": i,
