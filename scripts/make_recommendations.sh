@@ -1,7 +1,9 @@
 #!/bin/bash
 
 DIR="$1"
+
 RECOMMENDER_TS=1630962000 # 7 сентября 2021 г., 0:00:00 GMT+03:00
+RANDOM_WALK_TS=1615323600 # 10 марта 2021 г., 0:00:00 GMT+03:00
 
 if [ ! -d "$DIR" ]
 then
@@ -30,7 +32,14 @@ python3 -m ml.filter_actions \
     --new-actions-path site_actions.jsonl \
     --site
 
-# TODO: add random_walk trained on full data
+echo "==== Random walk (valid)"
+python3 -m ml.random_walk \
+    --input-directory $DIR \
+    --profile-actions-path filter_actions.jsonl \
+    --target-actions-path site_actions.jsonl \
+    --output-path final_random_walk.jsonl \
+    --start-ts $RANDOM_WALK_TS \
+    --top-k 1000
 
 echo "==== Make features"
 python3 -m ml.make_features \
@@ -41,7 +50,7 @@ python3 -m ml.make_features \
     --start-ts $RECOMMENDER_TS \
     --features-output-path final_features.tsv \
     --cd-output-path final_cd.tsv \
-    --rw-path valid_random_walk.jsonl \
+    --rw-path final_random_walk.jsonl \
     --rw-top-size 200 \
     --items-per-group 600
 
