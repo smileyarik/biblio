@@ -10,6 +10,10 @@ from ml.profiles import OT, CT, RT, Profile
 from util import read_jsonl, merge_meta
 
 
+# reader age statistics in item profile is stored as histogram with bins of size below (in years)
+READER_AGE_HISTOGRAM_BIN = 5
+
+
 def set_repeated_feature_counter(profile, feature, object_type):
     if feature_id := feature['id']:
         profile.counters.set(object_type, CT.HAS, RT.SUM, feature_id, 1, 0)
@@ -119,7 +123,7 @@ def main(
 
         if user_birth_ts := user_profile.counters.get(OT.AGE, CT.VALUE, RT.SUM, '', 0):
             assert ts >= user_birth_ts, "invalid user_birth_ts - {}: {}".format(user_id, user_birth_ts)
-            user_age_group = int(datetime.timedelta(seconds=ts-user_birth_ts).days // (5 * 365))
+            user_age_group = int(datetime.timedelta(seconds=ts-user_birth_ts).days // (READER_AGE_HISTOGRAM_BIN * 365))
             item_profile.counters.add(OT.READER_AGE, CT.BOOKING, RT.SUM, str(user_age_group), 1, ts)
 
         for rt in [RT.SUM, RT.D7, RT.D30]:
