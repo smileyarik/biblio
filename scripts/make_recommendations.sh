@@ -23,7 +23,7 @@ python3 -m ml.make_profiles \
     --item-profiles-path final_item_profiles.jsonl \
     --user-profiles-path final_user_profiles.jsonl
 
-# TODO: add random_walk and lstm trained on full data
+# TODO: add random_walk trained on full data
 
 echo "==== Make features"
 python3 -m ml.make_features \
@@ -34,7 +34,7 @@ python3 -m ml.make_features \
     --start-ts $RECOMMENDER_TS \
     --features-output-path final_features.tsv \
     --cd-output-path final_cd.tsv \
-    --rw-path train_random_walk.jsonl \ # TODO + ADD LSTM
+    --rw-path valid_random_walk.jsonl \
     --rw-top-size 200 \
     --items-per-group 600
 
