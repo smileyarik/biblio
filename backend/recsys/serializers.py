@@ -12,7 +12,7 @@ class BookSerializer(serializers.ModelSerializer):
 class ActionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Action
-        fields = ("book_id", "user_id")
+        fields = ("book_id", "user_id", "time")
 
 
 class UserSerializer(serializers.ModelSerializer):
