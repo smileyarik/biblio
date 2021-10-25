@@ -34,3 +34,8 @@ python3 load_fixture.py ../../workdir/final_items_fixture.json
 python3 load_fixture.py ../../workdir/final_actions_fixture.json
 python3 load_fixture.py ../../workdir/final_predictions_fixture.json
 ```
+
+### Формирование сабмита (требует запещенного веб-сервера)
+```
+python3 make_submission.py --input-directory ../../data --recsys-host http://178.154.225.68:8000/ --output-path ../result_task3.csv
+```
