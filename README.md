@@ -1,4 +1,5 @@
-# biblio
+# ЛИДЕРЫ ЦИФРОВОЙ ТРАНСФОРМАЦИИ
+[Задача 03](https://leaders2021.innoagency.ru/03/). Рекомендательная система для пользователей московскиих библиотек
 
 ## Data
 - **Основной предобработанный набор**: https://www.dropbox.com/s/ijaqsf72ez2kpmn/refined_data_v5.tar.gz
